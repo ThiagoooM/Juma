@@ -1,13 +1,15 @@
-import type { FeaturedPanel, HeroBanner } from "../../types";
+import type { Category, FeaturedPanel, HeroBanner } from "../../types";
 
 type AdminHomePanelProps = {
   heroBanner: HeroBanner;
   featuredPanels: FeaturedPanel[];
+  categories: Category[];
   canAddMorePanels: boolean;
   onUpdateHeroText: (field: "tag" | "title" | "subtitle", value: string) => void;
   onUpdateHeroImage: (file: File | null) => void;
   onUpdateFeaturedPanelText: (id: string, field: "title" | "cta", value: string) => void;
   onUpdateFeaturedPanelImage: (id: string, file: File | null) => void;
+  onUpdateFeaturedPanelCategory: (id: string, categoryId: number | null, categoryName: string | null) => void;
   onAddFeaturedPanel: () => void;
   onRemoveFeaturedPanel: (id: string) => void;
 };
@@ -15,6 +17,7 @@ type AdminHomePanelProps = {
 function AdminHomePanel({
   heroBanner,
   featuredPanels,
+  categories,
   canAddMorePanels,
   onUpdateHeroText,
   onUpdateHeroImage,
@@ -22,6 +25,7 @@ function AdminHomePanel({
   onUpdateFeaturedPanelImage,
   onAddFeaturedPanel,
   onRemoveFeaturedPanel,
+  onUpdateFeaturedPanelCategory,
 }: AdminHomePanelProps) {
   return (
     <div className="flex-1 p-6 md:p-10 space-y-20 bg-secondary dark:bg-carbon min-h-screen">
@@ -146,6 +150,36 @@ function AdminHomePanel({
                       onChange={(e) => onUpdateFeaturedPanelText(panel.id, "cta", e.target.value)}
                       placeholder="CTA (Ej. Ver 42 items)"
                     />
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">category</span>
+                        Categoría vinculada
+                      </label>
+                      <select
+                        className="w-full bg-white border border-slate-200 rounded text-xs px-3 py-2 text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none"
+                        value={panel.categoryId ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) {
+                            onUpdateFeaturedPanelCategory(panel.id, null, null);
+                          } else {
+                            const cat = categories.find(c => c.id === Number(val));
+                            onUpdateFeaturedPanelCategory(panel.id, Number(val), cat?.name ?? null);
+                          }
+                        }}
+                      >
+                        <option value="">— Sin categoría —</option>
+                        {categories.filter(c => !c.parentId).map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                      {panel.categoryId && (
+                        <p className="text-[10px] text-green-600 font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">link</span>
+                          Al hacer clic → catálogo filtrado
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

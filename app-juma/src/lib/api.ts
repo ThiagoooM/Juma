@@ -5,8 +5,18 @@ export const api = {
   async signUpClient(email: string, password: string, name: string, phone: string) {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-    if (data.user) {
-        await supabase.from('clients').insert([{ auth_id: data.user.id, name, email, phone }]);
+    const userId = data.user?.id;
+    if (userId) {
+      // Insert client profile regardless of email confirmation status
+      const existing = await supabase.from('clients').select('id').eq('email', email).maybeSingle();
+      if (!existing.data) {
+        await supabase.from('clients').insert([{ auth_id: userId, name, email, phone }]);
+      }
+    }
+    // Supabase returns identities=[] when email confirmation is required
+    const needsConfirmation = !data.session;
+    if (needsConfirmation) {
+      throw new Error('CONFIRMATION_REQUIRED');
     }
     return data;
   },

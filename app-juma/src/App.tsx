@@ -671,11 +671,15 @@ function App() {
           <AdminHomePanel
             heroBanner={heroBanner}
             featuredPanels={featuredPanels}
+            categories={categories}
             canAddMorePanels={featuredPanels.length < PANEL_SLOTS.length}
             onUpdateHeroText={updateHeroText}
             onUpdateHeroImage={updateHeroImage}
             onUpdateFeaturedPanelText={updateFeaturedPanelText}
             onUpdateFeaturedPanelImage={updateFeaturedPanelImage}
+            onUpdateFeaturedPanelCategory={(id, categoryId, categoryName) =>
+              setFeaturedPanels(prev => prev.map(p => p.id === id ? { ...p, categoryId, title: categoryName ?? p.title } : p))
+            }
             onAddFeaturedPanel={addFeaturedPanel}
             onRemoveFeaturedPanel={removeFeaturedPanel}
           />

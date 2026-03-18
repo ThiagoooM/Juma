@@ -8,7 +8,7 @@ type CustomerAuthModalProps = {
   onGuestContinue?: (guestData: { name: string; email: string; phone: string }) => void;
 };
 
-export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGuestContinue }: CustomerAuthModalProps) {
+export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGuestContinue }: CustomerAuthModalProps): React.ReactElement {
   const [tab, setTab] = useState<"login" | "register" | "guest">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +16,7 @@ export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGu
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +40,11 @@ export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGu
         onGuestContinue({ name, email, phone });
       }
     } catch (err: any) {
-      setError(err.message || "Ocurrió un error en la autenticación.");
+      if (err.message === 'CONFIRMATION_REQUIRED') {
+        setConfirmationSent(true);
+      } else {
+        setError(err.message || "Ocurrió un error en la autenticación.");
+      }
     } finally {
       setLoading(false);
     }
@@ -135,6 +140,11 @@ export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGu
           
           {error && (
             <p className="text-red-500 text-sm font-bold text-center mt-2">{error}</p>
+          )}
+          {confirmationSent && (
+            <div className="bg-green-50 border border-green-200 text-green-700 text-sm font-medium text-center p-4 rounded-xl mt-2">
+              ✅ ¡Revisa tu email! Te enviamos un link de confirmación. Una vez confirmado, podrás iniciar sesión.
+            </div>
           )}
         </form>
       </div>
