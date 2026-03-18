@@ -128,7 +128,7 @@ function App() {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        api.getClientByAuthId(session.user.id).then(c => {
+        api.getClientByAuthId(session.user.id, session.user.email).then(c => {
           setCurrentClient(c);
           if (c) api.getFavorites(c.id).then(setFavorites);
         });
@@ -629,7 +629,11 @@ function App() {
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => {
             setShowAuthModal(false);
-            if (authModalMode === "checkout") handleCustomerCheckout();
+            if (authModalMode === "checkout") {
+              handleCustomerCheckout();
+            } else {
+              setActiveTab("perfil");
+            }
           }}
           onGuestContinue={authModalMode === "checkout" ? (guestData) => {
             setShowAuthModal(false);

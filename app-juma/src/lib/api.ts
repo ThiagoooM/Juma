@@ -7,16 +7,13 @@ export const api = {
     if (error) throw error;
     const userId = data.user?.id;
     if (userId) {
-      // Insert client profile regardless of email confirmation status
       const existing = await supabase.from('clients').select('id').eq('email', email).maybeSingle();
       if (!existing.data) {
         await supabase.from('clients').insert([{ auth_id: userId, name, email, phone }]);
+      } else {
+        // Ensure auth_id is linked even if client was created manually
+        await supabase.from('clients').update({ auth_id: userId }).eq('email', email);
       }
-    }
-    // Supabase returns identities=[] when email confirmation is required
-    const needsConfirmation = !data.session;
-    if (needsConfirmation) {
-      throw new Error('CONFIRMATION_REQUIRED');
     }
     return data;
   },
@@ -28,10 +25,19 @@ export const api = {
   async signOutClient() {
     await supabase.auth.signOut();
   },
-  async getClientByAuthId(authId: string): Promise<Client | null> {
+  async getClientByAuthId(authId: string, fallbackEmail?: string): Promise<Client | null> {
     const { data, error } = await supabase.from('clients').select('*').eq('auth_id', authId).maybeSingle();
     if (error) throw error;
-    return data ? { ...data, authId: data.auth_id, createdAt: data.created_at } : null;
+    if (data) return { ...data, authId: data.auth_id, createdAt: data.created_at };
+    // If not found by auth_id, try by email (handles existing clients not yet linked)
+    if (fallbackEmail) {
+      const { data: byEmail } = await supabase.from('clients').select('*').eq('email', fallbackEmail).maybeSingle();
+      if (byEmail) {
+        await supabase.from('clients').update({ auth_id: authId }).eq('id', byEmail.id);
+        return { ...byEmail, authId, createdAt: byEmail.created_at };
+      }
+    }
+    return null;
   },
   async getClients(): Promise<Client[]> {
     const { data, error } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
