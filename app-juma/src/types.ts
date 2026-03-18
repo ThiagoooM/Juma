@@ -9,6 +9,13 @@ export type Category = {
   createdAt: string;
 };
 
+export type Favorite = {
+  id: number;
+  clientId: number;
+  productId: number;
+  createdAt: string;
+};
+
 export type Client = {
   id: number;
   authId?: string;
@@ -62,6 +69,7 @@ export type FeaturedPanel = {
   title: string;
   cta: string;
   image: string;
+  categoryId?: number | null;
   className: "card-left" | "card-top" | "card-bottom-left" | "card-bottom-right";
 };
 

@@ -9,6 +9,7 @@ import {
 import AdminHomePanel from "./features/admin/AdminHomePanel";
 import CartPanel from "./features/cart/CartPanel";
 import CatalogPanel from "./features/catalog/CatalogPanel";
+import CategoriesPanel from "./features/catalog/CategoriesPanel";
 import InventoryPanel from "./features/catalog/InventoryPanel";
 import ProductsPanel from "./features/catalog/ProductsPanel";
 import FinancePanel from "./features/finance/FinancePanel";
@@ -17,7 +18,7 @@ import ClientsPanel from "./features/users/ClientsPanel";
 import StoreHeader from "./features/users/StoreHeader";
 import ClientProfilePanel from "./features/users/ClientProfilePanel";
 import CustomerAuthModal from "./features/users/CustomerAuthModal";
-import type { CartItem, Client, FeaturedPanel, HeroBanner, NewOrderItem, Order, OrderItem, Product, Tab, Category } from "./types";
+import type { CartItem, Client, Favorite, FeaturedPanel, HeroBanner, NewOrderItem, Order, OrderItem, Product, Tab, Category } from "./types";
 import { api } from "./lib/api";
 import { supabase } from "./lib/supabase";
 
@@ -66,6 +67,8 @@ function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<string | null>(null);
   const [featuredPanels, setFeaturedPanels] = useState<FeaturedPanel[]>(DEFAULT_FEATURED_PANELS);
   const [heroBanner, setHeroBanner] = useState<HeroBanner>(DEFAULT_HERO_BANNER);
   const [error, setError] = useState("");
@@ -123,8 +126,15 @@ function App() {
       if (session) api.getClientByAuthId(session.user.id).then(c => setCurrentClient(c));
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) api.getClientByAuthId(session.user.id).then(c => setCurrentClient(c));
-      else setCurrentClient(null);
+      if (session) {
+        api.getClientByAuthId(session.user.id).then(c => {
+          setCurrentClient(c);
+          if (c) api.getFavorites(c.id).then(setFavorites);
+        });
+      } else {
+        setCurrentClient(null);
+        setFavorites([]);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -184,6 +194,40 @@ function App() {
   const cartTotal = useMemo(() => cartRows.reduce((acc, row) => acc + row.subtotal, 0), [cartRows]);
   const cartItemsCount = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems]);
   const catalogProducts = useMemo(() => products.filter((product) => product.enabled), [products]);
+
+  const addCategory = async (name: string, parentId?: number | null) => {
+    try {
+      const cat = await api.addCategory(name, parentId);
+      setCategories(prev => [...prev, cat].sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (err) { console.error(err); }
+  };
+
+  const deleteCategory = async (id: number) => {
+    try {
+      await api.deleteCategory(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (err) { console.error(err); }
+  };
+
+  const toggleFavorite = async (productId: number) => {
+    if (!currentClient) {
+      setAuthModalMode("login");
+      setShowAuthModal(true);
+      return;
+    }
+    const isFav = favorites.some(f => f.productId === productId);
+    await api.toggleFavorite(currentClient.id, productId, isFav);
+    if (isFav) {
+      setFavorites(prev => prev.filter(f => f.productId !== productId));
+    } else {
+      setFavorites(prev => [...prev, { id: Date.now(), clientId: currentClient.id, productId, createdAt: new Date().toISOString() }]);
+    }
+  };
+
+  const navigateToCategoryInCatalog = (categoryName: string) => {
+    setCatalogCategoryFilter(categoryName);
+    setActiveTab("catalogo");
+  };
 
   const addClient = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -601,6 +645,11 @@ function App() {
           onAddToCart={addToCart}
           featuredPanels={featuredPanels}
           heroBanner={heroBanner}
+          favoriteProductIds={new Set(favorites.map(f => f.productId))}
+          onToggleFavorite={toggleFavorite}
+          initialCategory={catalogCategoryFilter}
+          onCategoryChange={setCatalogCategoryFilter}
+          onPanelCategoryClick={navigateToCategoryInCatalog}
         />
       ) : null}
 
@@ -616,6 +665,16 @@ function App() {
             onUpdateFeaturedPanelImage={updateFeaturedPanelImage}
             onAddFeaturedPanel={addFeaturedPanel}
             onRemoveFeaturedPanel={removeFeaturedPanel}
+          />
+        </div>
+      ) : null}
+
+      {activeTab === "categorias" ? (
+        <div className="admin-scope">
+          <CategoriesPanel
+            categories={categories}
+            onAddCategory={addCategory}
+            onDeleteCategory={deleteCategory}
           />
         </div>
       ) : null}
@@ -643,6 +702,7 @@ function App() {
         <ClientProfilePanel
           clientName={currentClient.name}
           myOrders={orders.filter(o => o.clientId === currentClient.id)}
+          myFavorites={products.filter(p => favorites.some(f => f.productId === p.id))}
           onLogout={() => { api.signOutClient(); setActiveTab("catalogo"); }}
         />
       ) : null}

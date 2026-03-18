@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FeaturedPanel, HeroBanner, Product } from "../../types";
 
 type CatalogPanelProps = {
@@ -6,6 +6,11 @@ type CatalogPanelProps = {
   onAddToCart: (productId: number) => void;
   featuredPanels: FeaturedPanel[];
   heroBanner: HeroBanner;
+  favoriteProductIds: Set<number>;
+  onToggleFavorite: (productId: number) => void;
+  initialCategory: string | null;
+  onCategoryChange: (cat: string | null) => void;
+  onPanelCategoryClick: (categoryName: string) => void;
 };
 
 function CatalogPanel({
@@ -13,14 +18,27 @@ function CatalogPanel({
   onAddToCart,
   featuredPanels,
   heroBanner,
+  favoriteProductIds,
+  onToggleFavorite,
+  initialCategory,
+  onCategoryChange,
+  onPanelCategoryClick,
 }: CatalogPanelProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
 
-  // Parse hero title safely matching HTML structure if possible, or just print it generic if format unknown
+  useEffect(() => {
+    setSelectedCategory(initialCategory);
+  }, [initialCategory]);
+
+  const handleCategoryChange = (cat: string | null) => {
+    setSelectedCategory(cat);
+    onCategoryChange(cat);
+  };
+
   const heroTitleLines = heroBanner.title.split('\n');
 
   const filteredProducts = selectedCategory 
-    ? products.filter(p => p.category?.toLowerCase() === selectedCategory.toLowerCase())
+    ? products.filter(p => p.categoryName?.toLowerCase() === selectedCategory.toLowerCase())
     : products;
 
   return (
@@ -70,12 +88,11 @@ function CatalogPanel({
                 <h3 className="font-serif text-white text-xl font-bold tracking-tight">{panel.title}</h3>
                 <button 
                   onClick={() => {
-                    // Try to guess the category from the title, or if clicking panel resets
-                    setSelectedCategory(selectedCategory === panel.title ? null : panel.title);
+                    onPanelCategoryClick(panel.title);
                   }}
                   className="text-white/80 text-xs font-medium uppercase tracking-widest mt-2 flex items-center gap-2 group-hover:text-white pb-1"
                 >
-                  {selectedCategory === panel.title ? "Quitar Filtro" : panel.cta} <span className="material-symbols-outlined text-sm">trending_flat</span>
+                  {panel.cta} <span className="material-symbols-outlined text-sm">trending_flat</span>
                 </button>
               </div>
             </div>
@@ -93,7 +110,7 @@ function CatalogPanel({
             </h2>
           </div>
           <button 
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => handleCategoryChange(null)}
             className={`text-sm font-bold uppercase tracking-widest flex items-center gap-2 border-b-2 pb-1 transition-colors ${selectedCategory ? 'text-primary border-primary/20 hover:border-primary' : 'text-slate-400 border-transparent cursor-default'}`}
           >
             Ver todo el catálogo <span className="material-symbols-outlined text-sm">{selectedCategory ? 'close' : 'open_in_new'}</span>
@@ -113,14 +130,22 @@ function CatalogPanel({
                   ) : (
                     <span className="material-symbols-outlined text-6xl text-slate-300">image</span>
                   )}
-                  <button className="absolute top-3 right-3 bg-white/80 backdrop-blur rounded-full p-2 text-slate-400 hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined text-xl">favorite</span>
+                  <button 
+                    className={`absolute top-3 right-3 backdrop-blur rounded-full p-2 transition-all ${
+                      favoriteProductIds.has(product.id)
+                        ? 'bg-red-100 text-red-500 hover:bg-red-200'
+                        : 'bg-white/80 text-slate-400 hover:text-red-400'
+                    }`}
+                    onClick={() => onToggleFavorite(product.id)}
+                    title={favoriteProductIds.has(product.id) ? "Quitar de favoritos" : "Guardar en favoritos"}
+                  >
+                    <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: favoriteProductIds.has(product.id) ? "'FILL' 1" : "'FILL' 0" }}>favorite</span>
                   </button>
                   {product.stock <= 0 && (
                     <span className="absolute top-3 left-3 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Sin Stock</span>
                   )}
                 </div>
-                <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest mb-1">{product.category || "Categoría"}</p>
+                <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest mb-1">{product.categoryName || "Categoría"}</p>
                 <h4 className="text-slate-800 dark:text-slate-200 font-medium text-lg leading-tight">{product.name}</h4>
                 <p className="text-slate-900 dark:text-slate-100 font-bold mt-1 text-xl">${product.salePrice.toLocaleString("es-AR")}</p>
                 <button 

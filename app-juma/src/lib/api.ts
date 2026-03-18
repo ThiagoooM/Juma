@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Client, Product, Order, OrderItem, HeroBanner, FeaturedPanel, Category } from '../types';
+import type { Client, Product, Order, OrderItem, HeroBanner, FeaturedPanel, Category, Favorite } from '../types';
 
 export const api = {
   async signUpClient(email: string, password: string, name: string, phone: string) {
@@ -156,6 +156,18 @@ export const api = {
   async getFeaturedPanels(): Promise<FeaturedPanel[]> {
     const { data, error } = await supabase.from('featured_panels').select('*');
     if (error) throw error;
-    return data.map(p => ({ ...p, className: p.class_name }));
+    return data.map(p => ({ ...p, className: p.class_name, categoryId: p.category_id }));
+  },
+  async getFavorites(clientId: number): Promise<Favorite[]> {
+    const { data, error } = await supabase.from('favorites').select('*').eq('client_id', clientId);
+    if (error) throw error;
+    return data.map(f => ({ id: f.id, clientId: f.client_id, productId: f.product_id, createdAt: f.created_at }));
+  },
+  async toggleFavorite(clientId: number, productId: number, isFav: boolean): Promise<void> {
+    if (isFav) {
+      await supabase.from('favorites').delete().eq('client_id', clientId).eq('product_id', productId);
+    } else {
+      await supabase.from('favorites').insert([{ client_id: clientId, product_id: productId }]);
+    }
   }
 };
