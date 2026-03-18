@@ -1,9 +1,10 @@
-export type Tab = "inicio_admin" | "clientes" | "productos" | "catalogo" | "inventario" | "pedidos" | "finanzas" | "carrito";
+export type Tab = "inicio_admin" | "clientes" | "productos" | "catalogo" | "inventario" | "pedidos" | "finanzas" | "carrito" | "perfil";
 export type OrderStatus = "PENDIENTE" | "REALIZADO";
 export type CartItem = { productId: number; quantity: number };
 
 export type Client = {
   id: number;
+  authId?: string;
   name: string;
   phone: string;
   email: string;
@@ -33,7 +34,10 @@ export type OrderItem = {
 
 export type Order = {
   id: number;
-  clientId: number;
+  clientId?: number;
+  guestName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
   date: string;
   status: OrderStatus;
   items: OrderItem[];

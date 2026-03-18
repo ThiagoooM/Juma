@@ -5,7 +5,6 @@ import {
   ADMIN_USER,
   CART_ADMIN_KEY,
   CART_GUEST_KEY,
-  LS_KEY,
 } from "./constants";
 import AdminHomePanel from "./features/admin/AdminHomePanel";
 import CartPanel from "./features/cart/CartPanel";
@@ -16,7 +15,11 @@ import FinancePanel from "./features/finance/FinancePanel";
 import OrdersPanel from "./features/orders/OrdersPanel";
 import ClientsPanel from "./features/users/ClientsPanel";
 import StoreHeader from "./features/users/StoreHeader";
+import ClientProfilePanel from "./features/users/ClientProfilePanel";
+import CustomerAuthModal from "./features/users/CustomerAuthModal";
 import type { CartItem, Client, FeaturedPanel, HeroBanner, NewOrderItem, Order, OrderItem, Product, Tab } from "./types";
+import { api } from "./lib/api";
+import { supabase } from "./lib/supabase";
 
 const DEFAULT_FEATURED_PANELS: FeaturedPanel[] = [
   {
@@ -68,6 +71,9 @@ function App() {
   const [adminError, setAdminError] = useState("");
   const [isAdminLogged, setIsAdminLogged] = useState(false);
   const [adminForm, setAdminForm] = useState({ user: "", password: "" });
+  const [currentClient, setCurrentClient] = useState<Client | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"login" | "checkout">("login");
 
   const [clientForm, setClientForm] = useState({ name: "", phone: "", email: "" });
   const [productForm, setProductForm] = useState({
@@ -87,28 +93,42 @@ function App() {
   });
 
   useEffect(() => {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as { clients: Client[]; products: Product[]; orders: Order[]; featuredPanels?: FeaturedPanel[]; heroBanner?: HeroBanner };
-      setClients(parsed.clients ?? []);
-      setProducts((parsed.products ?? []).map((product) => ({ ...product, enabled: product.enabled ?? true, image: product.image ?? "" })));
-      setOrders(parsed.orders ?? []);
-      setFeaturedPanels(parsed.featuredPanels?.length ? parsed.featuredPanels : DEFAULT_FEATURED_PANELS);
-      setHeroBanner(parsed.heroBanner ?? DEFAULT_HERO_BANNER);
-    } catch {
-      localStorage.removeItem(LS_KEY);
+    async function loadData() {
+      try {
+        const [c, p, o, fp, hb] = await Promise.all([
+          api.getClients(),
+          api.getProducts(),
+          api.getOrders(),
+          api.getFeaturedPanels(),
+          api.getHeroBanner()
+        ]);
+        setClients(c);
+        setProducts(p.map((x) => ({ ...x, enabled: x.enabled ?? true, image: x.image ?? "" })));
+        setOrders(o);
+        if (fp.length > 0) setFeaturedPanels(fp);
+        if (hb) setHeroBanner(hb);
+      } catch (err) {
+        console.error("Failed to load initial data from Supabase", err);
+      }
     }
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) api.getClientByAuthId(session.user.id).then(c => setCurrentClient(c));
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) api.getClientByAuthId(session.user.id).then(c => setCurrentClient(c));
+      else setCurrentClient(null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     const raw = localStorage.getItem(ADMIN_SESSION_KEY);
     setIsAdminLogged(raw === "1");
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify({ clients, products, orders, featuredPanels, heroBanner }));
-  }, [clients, products, orders, featuredPanels, heroBanner]);
 
   useEffect(() => {
     localStorage.setItem(ADMIN_SESSION_KEY, isAdminLogged ? "1" : "0");
@@ -161,22 +181,27 @@ function App() {
   const cartItemsCount = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems]);
   const catalogProducts = useMemo(() => products.filter((product) => product.enabled), [products]);
 
-  const addClient = (event: React.FormEvent<HTMLFormElement>) => {
+  const addClient = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!clientForm.name.trim()) return;
-    setClients((prev) => [{ id: prev.length + 1, name: clientForm.name.trim(), phone: clientForm.phone.trim(), email: clientForm.email.trim(), createdAt: new Date().toISOString() }, ...prev]);
-    setClientForm({ name: "", phone: "", email: "" });
+    try {
+      const newClient = await api.addClient({ name: clientForm.name.trim(), phone: clientForm.phone.trim(), email: clientForm.email.trim() });
+      setClients((prev) => [newClient, ...prev]);
+      setClientForm({ name: "", phone: "", email: "" });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const addProduct = (event: React.FormEvent<HTMLFormElement>) => {
+  const addProduct = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     if (!productForm.name.trim() || !productForm.purchasePrice || !productForm.salePrice || !productForm.stock) return;
     const stock = Number(productForm.stock);
     if (Number.isNaN(stock) || stock < 0) return;
-    setProducts((prev) => [
-      {
-        id: prev.length + 1,
+    
+    try {
+      const newProduct = await api.addProduct({
         name: productForm.name.trim(),
         category: productForm.category.trim() || "Sin categoria",
         purchasePrice: Number(productForm.purchasePrice),
@@ -186,13 +211,16 @@ function App() {
         enabled: true,
         image: productImageData,
         sourceUrl: productForm.sourceUrl.trim(),
-        createdAt: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-    setProductForm({ name: "", category: "", purchasePrice: "", salePrice: "", stock: "", sourceUrl: "" });
-    setProductImageData("");
-    setActiveTab("catalogo");
+      });
+      setProducts((prev) => [newProduct, ...prev]);
+      
+      setProductForm({ name: "", category: "", purchasePrice: "", salePrice: "", stock: "", sourceUrl: "" });
+      setProductImageData("");
+      setActiveTab("catalogo");
+    } catch (err) {
+      console.error(err);
+      setError("Error al guardar producto");
+    }
   };
 
   const removeOrderItemRow = (index: number) => {
@@ -247,7 +275,7 @@ function App() {
     }));
   };
 
-  const addOrder = (event: React.FormEvent<HTMLFormElement>) => {
+  const addOrder = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     const clientId = Number(orderForm.clientId);
@@ -264,12 +292,32 @@ function App() {
       setError("No hay stock suficiente para completar este pedido.");
       return;
     }
-    if (orderForm.status === "REALIZADO") deductStock(items);
-    setOrders((prev) => [{ id: prev.length + 1, clientId, date: orderForm.date, status: orderForm.status, items }, ...prev]);
-    setOrderForm({ clientId: "", date: new Date().toISOString().slice(0, 10), status: "PENDIENTE", items: [] });
+    
+    try {
+      const newOrder = await api.addOrder({
+        clientId,
+        date: orderForm.date,
+        status: orderForm.status,
+        items
+      });
+      
+      if (orderForm.status === "REALIZADO") {
+        for (const item of items) {
+            const prod = productMap.get(item.productId);
+            if(prod) await api.updateStock(prod.id, Math.max(0, prod.stock - item.quantity));
+        }
+        deductStock(items);
+      }
+      
+      setOrders((prev) => [newOrder, ...prev]);
+      setOrderForm({ clientId: "", date: new Date().toISOString().slice(0, 10), status: "PENDIENTE", items: [] });
+    } catch (err) {
+      console.error(err);
+      setError("Hubo un error al guardar el pedido en base de datos.");
+    }
   };
 
-  const markOrderAsRealized = (orderId: number) => {
+  const markOrderAsRealized = async (orderId: number) => {
     setError("");
     const order = orders.find((row) => row.id === orderId);
     if (!order || order.status === "REALIZADO") return;
@@ -277,17 +325,36 @@ function App() {
       setError(`No se puede completar el pedido #${order.id}: stock insuficiente.`);
       return;
     }
-    deductStock(order.items);
-    setOrders((prev) => prev.map((row) => (row.id === orderId ? { ...row, status: "REALIZADO" } : row)));
+    
+    try {
+      await api.updateOrderStatus(orderId, "REALIZADO");
+      for (const item of order.items) {
+          const prod = productMap.get(item.productId);
+          if(prod) await api.updateStock(prod.id, Math.max(0, prod.stock - item.quantity));
+      }
+      deductStock(order.items);
+      setOrders((prev) => prev.map((row) => (row.id === orderId ? { ...row, status: "REALIZADO" } : row)));
+    } catch (err) {
+      console.error(err);
+      setError("Error al actualizar pedido en base de datos.");
+    }
   };
 
-  const updateStock = (productId: number, newStock: number) => {
+  const updateStock = async (productId: number, newStock: number) => {
     if (Number.isNaN(newStock) || newStock < 0) return;
-    setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, stock: newStock } : product)));
+    try {
+      await api.updateStock(productId, newStock);
+      setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, stock: newStock } : product)));
+    } catch (err) { console.error(err); }
   };
 
-  const toggleProductEnabled = (productId: number) => {
-    setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, enabled: !product.enabled } : product)));
+  const toggleProductEnabled = async (productId: number) => {
+    const product = productMap.get(productId);
+    if (!product) return;
+    try {
+      await api.updateProduct(productId, { enabled: !product.enabled });
+      setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, enabled: !product.enabled } : product)));
+    } catch (err) { console.error(err); }
   };
 
   const clientStats = useMemo(() => clients.map((client) => {
@@ -427,10 +494,15 @@ function App() {
   const updateExistingProductImage = (productId: number, file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = typeof reader.result === "string" ? reader.result : "";
       if (!dataUrl) return;
-      setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, image: dataUrl } : product)));
+      try {
+        await api.updateProduct(productId, { image: dataUrl });
+        setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, image: dataUrl } : product)));
+      } catch (err) {
+        console.error("Error updating image", err);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -452,8 +524,33 @@ function App() {
     setActiveTab("catalogo");
   };
 
+  const handleCustomerCheckout = async (guestData?: { name: string, email: string, phone: string }) => {
+    try {
+      if (cartItems.length === 0) return;
+      
+      const orderItems = buildOrderItems(cartItems.map(c => ({ productId: String(c.productId), quantity: String(c.quantity) })));
+      const newOrder = await api.addOrder({
+        clientId: currentClient?.id,
+        guestName: guestData?.name,
+        guestEmail: guestData?.email,
+        guestPhone: guestData?.phone,
+        date: new Date().toISOString().slice(0, 10),
+        status: "PENDIENTE",
+        items: orderItems,
+      });
+      
+      setOrders(prev => [newOrder, ...prev]);
+      clearCart();
+      alert("¡Pedido realizado con éxito! Nos pondremos en contacto contigo pronto.");
+      setActiveTab("catalogo");
+    } catch(err) {
+      console.error(err);
+      setError("Error al procesar el pedido.");
+    }
+  };
+
   return (
-    <div className="app-shell">
+    <div className="layout-container flex min-h-screen flex-col">
       <StoreHeader
         activeTab={activeTab}
         isAdminLogged={isAdminLogged}
@@ -461,13 +558,37 @@ function App() {
         adminError={adminError}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
+        currentClient={currentClient}
         onSetActiveTab={setActiveTab}
         onAdminFormChange={setAdminForm}
         onLoginAdmin={loginAdmin}
         onLogoutAdmin={logoutAdmin}
+        onLoginClientClick={() => { setAuthModalMode("login"); setShowAuthModal(true); }}
       />
 
-      {error ? <div className="alert">{error}</div> : null}
+      {error ? (
+        <div className="bg-red-50 text-red-500 p-4 text-center text-sm font-bold tracking-widest uppercase flex items-center justify-center gap-2">
+          <span className="material-symbols-outlined text-lg">error</span>
+          {error}
+        </div>
+      ) : null}
+
+      {showAuthModal && (
+        <CustomerAuthModal
+          allowGuest={authModalMode === "checkout"}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={() => {
+            setShowAuthModal(false);
+            if (authModalMode === "checkout") handleCustomerCheckout();
+          }}
+          onGuestContinue={authModalMode === "checkout" ? (guestData) => {
+            setShowAuthModal(false);
+            handleCustomerCheckout(guestData);
+          } : undefined}
+        />
+      )}
+
+      <main className="flex flex-col grow">
 
       {activeTab === "catalogo" ? (
         <CatalogPanel
@@ -502,6 +623,22 @@ function App() {
           onUpdateCartQuantity={updateCartQuantity}
           onRemoveFromCart={removeFromCart}
           onClearCart={clearCart}
+          onCheckoutClick={() => {
+            if (currentClient) {
+              handleCustomerCheckout();
+            } else {
+              setAuthModalMode("checkout");
+              setShowAuthModal(true);
+            }
+          }}
+        />
+      ) : null}
+
+      {activeTab === "perfil" && currentClient ? (
+        <ClientProfilePanel
+          clientName={currentClient.name}
+          myOrders={orders.filter(o => o.clientId === currentClient.id)}
+          onLogout={() => { api.signOutClient(); setActiveTab("catalogo"); }}
         />
       ) : null}
 
@@ -563,6 +700,60 @@ function App() {
       ) : null}
 
       {activeTab === "finanzas" ? <div className="admin-scope"><FinancePanel finance={finance} /></div> : null}
+      
+      </main>
+
+      <footer className="bg-background-dark text-slate-400 px-6 md:px-20 py-16 mt-auto">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 border-b border-white/10 pb-16">
+          <div className="col-span-1 md:col-span-1">
+            <h3 className="text-white text-xl font-black uppercase mb-4">Juma Accessory</h3>
+            <p className="text-sm leading-relaxed mb-6">Tu destino premium para accesorios de plata 925 y joyería de diseño. Elegancia y calidad en cada pieza.</p>
+            <div className="flex gap-4">
+              <a href="https://www.instagram.com/juma.accessory/" target="_blank" rel="noreferrer" className="size-8 rounded-full border border-white/10 flex items-center justify-center hover:bg-primary hover:border-primary hover:text-white transition-all">
+                <span className="material-symbols-outlined text-lg">public</span>
+              </a>
+              <a href="#" className="size-8 rounded-full border border-white/10 flex items-center justify-center hover:bg-primary hover:border-primary hover:text-white transition-all">
+                <span className="material-symbols-outlined text-lg">alternate_email</span>
+              </a>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-white font-bold uppercase text-xs tracking-widest mb-6">Tienda</h4>
+            <ul className="space-y-4 text-sm">
+              <li><button onClick={() => setActiveTab("catalogo")} className="hover:text-primary transition-colors uppercase font-medium tracking-wider text-[10px]">Catálogo</button></li>
+              <li><button onClick={() => setActiveTab("carrito")} className="hover:text-primary transition-colors uppercase font-medium tracking-wider text-[10px]">Carrito</button></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-white font-bold uppercase text-xs tracking-widest mb-6">Soporte</h4>
+            <ul className="space-y-4 text-sm">
+              <li><a href="#" className="hover:text-primary transition-colors uppercase font-medium tracking-wider text-[10px]">Envíos y Entregas</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors uppercase font-medium tracking-wider text-[10px]">Políticas de Devolución</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-white font-bold uppercase text-xs tracking-widest mb-6">Contacto</h4>
+            <ul className="space-y-4 text-sm">
+              <li className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-sm">location_on</span>
+                Buenos Aires, Argentina
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-sm">mail</span>
+                hola@jumaaccessory.com
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-[0.2em] font-medium">
+          <p>© 2024 Juma Accessory. Todos los derechos reservados.</p>
+          <div className="flex gap-4 opacity-50 grayscale hover:grayscale-0 transition-all">
+            <span className="material-symbols-outlined">payments</span>
+            <span className="material-symbols-outlined">credit_card</span>
+            <span className="material-symbols-outlined">account_balance</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
