@@ -1,6 +1,13 @@
-export type Tab = "inicio_admin" | "clientes" | "productos" | "catalogo" | "inventario" | "pedidos" | "finanzas" | "carrito" | "perfil";
+export type Tab = "inicio_admin" | "categorias" | "clientes" | "productos" | "catalogo" | "inventario" | "pedidos" | "finanzas" | "carrito" | "perfil";
 export type OrderStatus = "PENDIENTE" | "REALIZADO";
 export type CartItem = { productId: number; quantity: number };
+
+export type Category = {
+  id: number;
+  name: string;
+  parentId?: number | null;
+  createdAt: string;
+};
 
 export type Client = {
   id: number;
@@ -14,7 +21,9 @@ export type Client = {
 export type Product = {
   id: number;
   name: string;
-  category: string;
+  categoryId?: number | null;
+  categoryName?: string; // Denormalized or joined for UI
+  isFeatured: boolean;
   purchasePrice: number;
   salePrice: number;
   stock: number;

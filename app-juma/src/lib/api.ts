@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Client, Product, Order, OrderItem, HeroBanner, FeaturedPanel } from '../types';
+import type { Client, Product, Order, OrderItem, HeroBanner, FeaturedPanel, Category } from '../types';
 
 export const api = {
   async signUpClient(email: string, password: string, name: string, phone: string) {
@@ -33,11 +33,33 @@ export const api = {
     if (error) throw error;
     return { ...data, createdAt: data.created_at };
   },
-  async getProducts(): Promise<Product[]> {
-    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+  async getCategories(): Promise<Category[]> {
+    const { data, error } = await supabase.from('categories').select('*').order('name', { ascending: true });
     if (error) throw error;
-    return data.map(p => ({
+    return data.map(c => ({
+      id: c.id,
+      name: c.name,
+      parentId: c.parent_id,
+      createdAt: c.created_at
+    }));
+  },
+  async addCategory(name: string, parentId?: number | null): Promise<Category> {
+    const { data, error } = await supabase.from('categories').insert([{ name, parent_id: parentId }]).select().single();
+    if (error) throw error;
+    return { id: data.id, name: data.name, parentId: data.parent_id, createdAt: data.created_at };
+  },
+  async deleteCategory(id: number): Promise<void> {
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error) throw error;
+  },
+  async getProducts(): Promise<Product[]> {
+    const { data, error } = await supabase.from('products').select('*, categories(name)').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data.map((p: any) => ({
       ...p,
+      categoryId: p.category_id,
+      categoryName: p.categories?.name,
+      isFeatured: p.is_featured,
       purchasePrice: p.purchase_price,
       salePrice: p.sale_price,
       initialStock: p.initial_stock,
@@ -48,7 +70,8 @@ export const api = {
   async addProduct(product: Partial<Product>): Promise<Product> {
     const { data, error } = await supabase.from('products').insert([{
       name: product.name,
-      category: product.category,
+      category_id: product.categoryId || null,
+      is_featured: product.isFeatured || false,
       purchase_price: product.purchasePrice,
       sale_price: product.salePrice,
       stock: product.stock,
@@ -56,7 +79,7 @@ export const api = {
       enabled: product.enabled,
       image: product.image,
       source_url: product.sourceUrl
-    }]).select().single();
+    }]).select('*, categories(name)').single();
     if (error) throw error;
     return {
       ...data,
@@ -72,6 +95,8 @@ export const api = {
     if (updates.stock !== undefined) payload.stock = updates.stock;
     if (updates.enabled !== undefined) payload.enabled = updates.enabled;
     if (updates.image !== undefined) payload.image = updates.image;
+    if (updates.isFeatured !== undefined) payload.is_featured = updates.isFeatured;
+    if (updates.categoryId !== undefined) payload.category_id = updates.categoryId;
     const { error } = await supabase.from('products').update(payload).eq('id', id);
     if (error) throw error;
   },

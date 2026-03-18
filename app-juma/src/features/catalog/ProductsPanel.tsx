@@ -1,18 +1,20 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import type { Product } from "../../types";
+import type { Product, Category } from "../../types";
 
 type ProductForm = {
   name: string;
-  category: string;
+  categoryId: string;
   purchasePrice: string;
   salePrice: string;
   stock: string;
   sourceUrl: string;
+  isFeatured: boolean;
 };
 
 type ProductsPanelProps = {
   products: Product[];
+  categories: Category[];
   productForm: ProductForm;
   productImageData: string;
   onProductFormChange: (next: ProductForm) => void;
@@ -24,6 +26,7 @@ type ProductsPanelProps = {
 
 function ProductsPanel({
   products,
+  categories,
   productForm,
   productImageData,
   onProductFormChange,
@@ -39,7 +42,7 @@ function ProductsPanel({
     const normalized = query.trim().toLowerCase();
     if (!normalized) return products;
     return products.filter((product) =>
-      [product.name, product.category].some((value) => value.toLowerCase().includes(normalized)),
+      [product.name, product.categoryName || ""].some((value) => value.toLowerCase().includes(normalized)),
     );
   }, [products, query]);
 
@@ -132,7 +135,17 @@ function ProductsPanel({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Categoría</label>
-              <input required className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Ej. Collares" value={productForm.category} onChange={(e) => onProductFormChange({ ...productForm, category: e.target.value })} />
+              <select 
+                required 
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
+                value={productForm.categoryId} 
+                onChange={(e) => onProductFormChange({ ...productForm, categoryId: e.target.value })}
+              >
+                <option value="" disabled>Seleccionar Categoría</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Precio Compra ($)</label>
@@ -149,6 +162,18 @@ function ProductsPanel({
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">URL Reposición (Opcional)</label>
               <input className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Enlace al proveedor" value={productForm.sourceUrl} onChange={(e) => onProductFormChange({ ...productForm, sourceUrl: e.target.value })} />
+            </div>
+            <div className="space-y-2 flex flex-col justify-center pt-6">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={productForm.isFeatured} 
+                  onChange={(e) => onProductFormChange({ ...productForm, isFeatured: e.target.checked })}
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <span className="ms-3 text-sm font-bold text-slate-700">Destacar en Inicio</span>
+              </label>
             </div>
           </div>
           
@@ -216,7 +241,10 @@ function ProductsPanel({
                       <span className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{product.name}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium">{product.category}</td>
+                  <td className="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
+                    {product.categoryName || <span className="text-slate-400 italic">Sin Categoría</span>}
+                    {product.isFeatured && <span className="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold uppercase rounded" title="Destacado en Inicio">★</span>}
+                  </td>
                   <td className="p-4 text-sm font-medium text-slate-500">${product.purchasePrice.toLocaleString("es-AR")}</td>
                   <td className="p-4 text-sm font-bold text-primary">${product.salePrice.toLocaleString("es-AR")}</td>
                   <td className="p-4">

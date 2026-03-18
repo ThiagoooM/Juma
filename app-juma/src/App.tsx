@@ -17,7 +17,7 @@ import ClientsPanel from "./features/users/ClientsPanel";
 import StoreHeader from "./features/users/StoreHeader";
 import ClientProfilePanel from "./features/users/ClientProfilePanel";
 import CustomerAuthModal from "./features/users/CustomerAuthModal";
-import type { CartItem, Client, FeaturedPanel, HeroBanner, NewOrderItem, Order, OrderItem, Product, Tab } from "./types";
+import type { CartItem, Client, FeaturedPanel, HeroBanner, NewOrderItem, Order, OrderItem, Product, Tab, Category } from "./types";
 import { api } from "./lib/api";
 import { supabase } from "./lib/supabase";
 
@@ -62,6 +62,7 @@ const DEFAULT_HERO_BANNER: HeroBanner = {
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("catalogo");
   const [clients, setClients] = useState<Client[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -78,11 +79,12 @@ function App() {
   const [clientForm, setClientForm] = useState({ name: "", phone: "", email: "" });
   const [productForm, setProductForm] = useState({
     name: "",
-    category: "",
+    categoryId: "",
     purchasePrice: "",
     salePrice: "",
     stock: "",
     sourceUrl: "",
+    isFeatured: false,
   });
   const [productImageData, setProductImageData] = useState("");
   const [orderForm, setOrderForm] = useState({
@@ -95,14 +97,16 @@ function App() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [c, p, o, fp, hb] = await Promise.all([
+        const [c, cats, p, o, fp, hb] = await Promise.all([
           api.getClients(),
+          api.getCategories(),
           api.getProducts(),
           api.getOrders(),
           api.getFeaturedPanels(),
           api.getHeroBanner()
         ]);
         setClients(c);
+        setCategories(cats);
         setProducts(p.map((x) => ({ ...x, enabled: x.enabled ?? true, image: x.image ?? "" })));
         setOrders(o);
         if (fp.length > 0) setFeaturedPanels(fp);
@@ -203,7 +207,8 @@ function App() {
     try {
       const newProduct = await api.addProduct({
         name: productForm.name.trim(),
-        category: productForm.category.trim() || "Sin categoria",
+        categoryId: Number(productForm.categoryId) || undefined,
+        isFeatured: productForm.isFeatured,
         purchasePrice: Number(productForm.purchasePrice),
         salePrice: Number(productForm.salePrice),
         stock,
@@ -214,7 +219,7 @@ function App() {
       });
       setProducts((prev) => [newProduct, ...prev]);
       
-      setProductForm({ name: "", category: "", purchasePrice: "", salePrice: "", stock: "", sourceUrl: "" });
+      setProductForm({ name: "", categoryId: "", purchasePrice: "", salePrice: "", stock: "", sourceUrl: "", isFeatured: false });
       setProductImageData("");
       setActiveTab("catalogo");
     } catch (err) {
@@ -646,6 +651,7 @@ function App() {
         <div className="admin-scope">
           <ProductsPanel
             products={products}
+            categories={categories}
             productForm={productForm}
             productImageData={productImageData}
             onProductFormChange={setProductForm}

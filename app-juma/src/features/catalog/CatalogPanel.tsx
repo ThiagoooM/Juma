@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { FeaturedPanel, HeroBanner, Product } from "../../types";
 
 type CatalogPanelProps = {
@@ -13,8 +14,14 @@ function CatalogPanel({
   featuredPanels,
   heroBanner,
 }: CatalogPanelProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
   // Parse hero title safely matching HTML structure if possible, or just print it generic if format unknown
   const heroTitleLines = heroBanner.title.split('\n');
+
+  const filteredProducts = selectedCategory 
+    ? products.filter(p => p.category?.toLowerCase() === selectedCategory.toLowerCase())
+    : products;
 
   return (
     <div className="flex flex-col">
@@ -61,8 +68,14 @@ function CatalogPanel({
               />
               <div className="absolute inset-0 p-6 flex flex-col justify-end">
                 <h3 className="font-serif text-white text-xl font-bold tracking-tight">{panel.title}</h3>
-                <button className="text-white/80 text-xs font-medium uppercase tracking-widest mt-2 flex items-center gap-2 group-hover:text-white pb-1">
-                  {panel.cta} <span className="material-symbols-outlined text-sm">trending_flat</span>
+                <button 
+                  onClick={() => {
+                    // Try to guess the category from the title, or if clicking panel resets
+                    setSelectedCategory(selectedCategory === panel.title ? null : panel.title);
+                  }}
+                  className="text-white/80 text-xs font-medium uppercase tracking-widest mt-2 flex items-center gap-2 group-hover:text-white pb-1"
+                >
+                  {selectedCategory === panel.title ? "Quitar Filtro" : panel.cta} <span className="material-symbols-outlined text-sm">trending_flat</span>
                 </button>
               </div>
             </div>
@@ -75,19 +88,24 @@ function CatalogPanel({
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
           <div className="flex flex-col">
             <span className="text-primary font-bold tracking-[0.3em] uppercase text-xs mb-2">Catálogo Online</span>
-            <h2 className="font-serif text-slate-900 dark:text-slate-100 text-3xl font-light">Novedades</h2>
+            <h2 className="font-serif text-slate-900 dark:text-slate-100 text-3xl font-light">
+              {selectedCategory ? `Categoría: ${selectedCategory}` : "Novedades"}
+            </h2>
           </div>
-          <button className="text-primary text-sm font-bold uppercase tracking-widest flex items-center gap-2 border-b-2 border-primary/20 pb-1 hover:border-primary transition-colors">
-            Ver todo el catálogo <span className="material-symbols-outlined text-sm">open_in_new</span>
+          <button 
+            onClick={() => setSelectedCategory(null)}
+            className={`text-sm font-bold uppercase tracking-widest flex items-center gap-2 border-b-2 pb-1 transition-colors ${selectedCategory ? 'text-primary border-primary/20 hover:border-primary' : 'text-slate-400 border-transparent cursor-default'}`}
+          >
+            Ver todo el catálogo <span className="material-symbols-outlined text-sm">{selectedCategory ? 'close' : 'open_in_new'}</span>
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {products.length === 0 ? (
+          {filteredProducts.length === 0 ? (
             <div className="col-span-full text-center py-20 text-slate-500">
               No hay productos cargados en el catálogo.
             </div>
           ) : (
-            products.map((product) => (
+            filteredProducts.map((product) => (
               <div key={product.id} className="flex flex-col group">
                 <div className="relative aspect-square overflow-hidden rounded-xl mb-4 bg-slate-100 shadow-sm transition-shadow group-hover:shadow-xl flex items-center justify-center">
                   {product.image ? (
