@@ -128,9 +128,11 @@ export default function StoreHeader({
           <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "carrito" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("carrito")}>Carrito</button>
           {isAdminLogged && (
             <>
+              <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "venta_rapida" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("venta_rapida")}>Venta Rápida</button>
               <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "inicio_admin" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("inicio_admin")}>Configurar</button>
               <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "pedidos" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("pedidos")}>Pedidos</button>
               <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "productos" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("productos")}>Productos</button>
+              <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "categorias" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("categorias")}>Categorías</button>
               <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "clientes" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("clientes")}>Clientes</button>
               <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "inventario" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("inventario")}>Inventario</button>
               <button className={`hover:text-primary transition-colors pb-2 border-b-2 ${activeTab === "finanzas" ? "text-primary border-primary" : "border-transparent"}`} onClick={() => onSetActiveTab("finanzas")}>Finanzas</button>

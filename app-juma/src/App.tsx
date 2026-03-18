@@ -7,6 +7,7 @@ import {
   CART_GUEST_KEY,
 } from "./constants";
 import AdminHomePanel from "./features/admin/AdminHomePanel";
+import QuickSalePanel from "./features/admin/QuickSalePanel";
 import CartPanel from "./features/cart/CartPanel";
 import CatalogPanel from "./features/catalog/CatalogPanel";
 import CategoriesPanel from "./features/catalog/CategoriesPanel";
@@ -651,6 +652,18 @@ function App() {
           onCategoryChange={setCatalogCategoryFilter}
           onPanelCategoryClick={navigateToCategoryInCatalog}
         />
+      ) : null}
+
+      {activeTab === "venta_rapida" ? (
+        <div className="admin-scope flex flex-1 overflow-hidden">
+          <QuickSalePanel
+            products={products}
+            categories={categories}
+            clients={clients}
+            onOrderPlaced={(order) => setOrders(prev => [order, ...prev])}
+            onUpdateStock={(productId, newStock) => setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStock } : p))}
+          />
+        </div>
       ) : null}
 
       {activeTab === "inicio_admin" ? (
