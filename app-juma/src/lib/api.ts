@@ -64,6 +64,19 @@ export const api = {
     return mapClient(row);
   },
 
+  async updateClient(id: number, updates: Partial<Client>): Promise<void> {
+    await http(`/clients/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteClient(id: number): Promise<void> {
+    await http(`/clients/${id}`, {
+      method: "DELETE",
+    });
+  },
+
   // ── PRODUCTS ──────────────────────────────────────────────
   async getProducts(): Promise<Product[]> {
     const rows = await http<any[]>("/products");

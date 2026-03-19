@@ -15,9 +15,22 @@ type ClientsPanelProps = {
   clientStats: ClientStat[];
   onClientFormChange: (next: ClientForm) => void;
   onAddClient: (event: FormEvent<HTMLFormElement>) => void;
+  onEditClick: (client: Client) => void;
+  onDeleteClick: (id: number) => void;
+  editingClientId: number | null;
+  onCancelEdit: () => void;
 };
 
-function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient }: ClientsPanelProps) {
+function ClientsPanel({ 
+  clientForm, 
+  clientStats, 
+  onClientFormChange, 
+  onAddClient, 
+  onEditClick, 
+  onDeleteClick, 
+  editingClientId, 
+  onCancelEdit 
+}: ClientsPanelProps) {
   return (
     <div className="flex-1 p-6 md:p-10 space-y-20 bg-secondary dark:bg-carbon min-h-screen">
       {/* Header Actions */}
@@ -42,8 +55,22 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
       </div>
 
       {/* Add Client Form */}
-      <form className="bg-white dark:bg-slate-900 p-8 rounded-xl border border-neutral-soft dark:border-slate-800 shadow-sm" onSubmit={onAddClient}>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 border-b border-neutral-soft dark:border-slate-800 pb-4">Registrar Nuevo Usuario</h3>
+      <form className={`p-8 rounded-xl border shadow-sm transition-all ${editingClientId ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30' : 'bg-white dark:bg-slate-900 border-neutral-soft dark:border-slate-800'}`} onSubmit={onAddClient}>
+        <div className="flex items-center justify-between mb-6 border-b border-neutral-soft dark:border-slate-800 pb-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            {editingClientId ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}
+          </h3>
+          {editingClientId && (
+            <button 
+              type="button" 
+              onClick={onCancelEdit}
+              className="text-amber-700 dark:text-amber-400 text-sm font-bold flex items-center gap-1 hover:underline"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+              Cancelar Edición
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700">Nombre Completo</label>
@@ -59,7 +86,9 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
           </div>
         </div>
         <div className="flex justify-end pt-4 border-t border-neutral-soft dark:border-slate-800">
-          <button type="submit" className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary/20 transition-all">Guardar Usuario</button>
+          <button type="submit" className={`${editingClientId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-primary hover:bg-primary/90'} text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all`}>
+            {editingClientId ? 'Actualizar Usuario' : 'Guardar Usuario'}
+          </button>
         </div>
       </form>
 
@@ -77,7 +106,8 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500">Contacto</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-center">Pedidos</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500">Última Compra</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Total Comprado</th>
+                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Total Comprado</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-soft dark:divide-slate-800">
@@ -105,6 +135,24 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
                   </td>
                   <td className="p-4 text-sm font-medium text-slate-500">{row.lastOrderDate === "-" ? "-" : new Date(row.lastOrderDate).toLocaleDateString("es-AR", { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                   <td className="p-4 text-right font-bold text-primary text-base">${row.totalSpent.toLocaleString("es-AR")}</td>
+                  <td className="p-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => onEditClick(row.client)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Editar usuario"
+                      >
+                        <span className="material-symbols-outlined">edit</span>
+                      </button>
+                      <button 
+                        onClick={() => onDeleteClick(row.client.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Eliminar usuario"
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {clientStats.length === 0 && (

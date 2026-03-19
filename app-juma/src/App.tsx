@@ -85,6 +85,7 @@ function App() {
   const [authModalMode, setAuthModalMode] = useState<"login" | "checkout">("login");
 
   const [clientForm, setClientForm] = useState({ name: "", phone: "", email: "" });
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [productForm, setProductForm] = useState({
     name: "",
     categoryId: "",
@@ -229,16 +230,50 @@ function App() {
     setActiveTab("catalogo");
   };
 
-  const addClient = async (event: React.FormEvent<HTMLFormElement>) => {
+  const saveUser = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!clientForm.name.trim()) return;
     try {
-      const newClient = await api.addClient({ name: clientForm.name.trim(), phone: clientForm.phone.trim(), email: clientForm.email.trim() });
-      setClients((prev) => [newClient, ...prev]);
+      if (editingUserId) {
+        await api.updateClient(editingUserId, { 
+          name: clientForm.name.trim(), 
+          phone: clientForm.phone.trim(), 
+          email: clientForm.email.trim() 
+        });
+        setClients(prev => prev.map(c => c.id === editingUserId ? { ...c, ...clientForm } : c));
+        setEditingUserId(null);
+      } else {
+        const newClient = await api.addClient({ 
+          name: clientForm.name.trim(), 
+          phone: clientForm.phone.trim(), 
+          email: clientForm.email.trim() 
+        });
+        setClients((prev) => [newClient, ...prev]);
+      }
       setClientForm({ name: "", phone: "", email: "" });
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const deleteUser = async (id: number) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este usuario?")) return;
+    try {
+      await api.deleteClient(id);
+      setClients(prev => prev.filter(c => c.id !== id));
+      if (editingUserId === id) {
+        setEditingUserId(null);
+        setClientForm({ name: "", phone: "", email: "" });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const startEditingUser = (client: Client) => {
+    setEditingUserId(client.id);
+    setClientForm({ name: client.name, phone: client.phone, email: client.email });
+    // Tab switching or scrolling is handled by the UI or implicitly by the switch
   };
 
   const addProduct = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -707,7 +742,14 @@ function App() {
                   clientForm={clientForm}
                   clientStats={clientStats}
                   onClientFormChange={setClientForm}
-                  onAddClient={addClient}
+                  onAddClient={saveUser}
+                  onEditClick={startEditingUser}
+                  onDeleteClick={deleteUser}
+                  editingClientId={editingUserId}
+                  onCancelEdit={() => {
+                    setEditingUserId(null);
+                    setClientForm({ name: "", phone: "", email: "" });
+                  }}
                 />
               </div>
             )}
