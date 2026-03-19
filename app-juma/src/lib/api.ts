@@ -1,189 +1,235 @@
-import { supabase } from './supabase';
 import type { Client, Product, Order, OrderItem, HeroBanner, FeaturedPanel, Category, Favorite } from '../types';
 
-export const api = {
-  async signUpClient(email: string, password: string, name: string, phone: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-    const userId = data.user?.id;
-    if (userId) {
-      const existing = await supabase.from('clients').select('id').eq('email', email).maybeSingle();
-      if (!existing.data) {
-        await supabase.from('clients').insert([{ auth_id: userId, name, email, phone }]);
-      } else {
-        // Ensure auth_id is linked even if client was created manually
-        await supabase.from('clients').update({ auth_id: userId }).eq('email', email);
-      }
-    }
-    return data;
-  },
-  async signInClient(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
-  },
-  async signOutClient() {
-    await supabase.auth.signOut();
-  },
-  async getClientByAuthId(authId: string, fallbackEmail?: string): Promise<Client | null> {
-    const { data, error } = await supabase.from('clients').select('*').eq('auth_id', authId).maybeSingle();
-    if (error) throw error;
-    if (data) return { ...data, authId: data.auth_id, createdAt: data.created_at };
-    // If not found by auth_id, try by email (handles existing clients not yet linked)
-    if (fallbackEmail) {
-      const { data: byEmail } = await supabase.from('clients').select('*').eq('email', fallbackEmail).maybeSingle();
-      if (byEmail) {
-        await supabase.from('clients').update({ auth_id: authId }).eq('id', byEmail.id);
-        return { ...byEmail, authId, createdAt: byEmail.created_at };
-      }
-    }
-    return null;
-  },
-  async getClients(): Promise<Client[]> {
-    const { data, error } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data.map(c => ({ ...c, createdAt: c.created_at }));
-  },
-  async addClient(client: { name: string; phone: string; email: string }): Promise<Client> {
-    const { data, error } = await supabase.from('clients').insert([client]).select().single();
-    if (error) throw error;
-    return { ...data, createdAt: data.created_at };
-  },
-  async getCategories(): Promise<Category[]> {
-    const { data, error } = await supabase.from('categories').select('*').order('name', { ascending: true });
-    if (error) throw error;
-    return data.map(c => ({
-      id: c.id,
-      name: c.name,
-      parentId: c.parent_id,
-      createdAt: c.created_at
-    }));
-  },
-  async addCategory(name: string, parentId?: number | null): Promise<Category> {
-    const { data, error } = await supabase.from('categories').insert([{ name, parent_id: parentId }]).select().single();
-    if (error) throw error;
-    return { id: data.id, name: data.name, parentId: data.parent_id, createdAt: data.created_at };
-  },
-  async deleteCategory(id: number): Promise<void> {
-    const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (error) throw error;
-  },
-  async getProducts(): Promise<Product[]> {
-    const { data, error } = await supabase.from('products').select('*, categories(name)').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data.map((p: any) => ({
-      ...p,
-      categoryId: p.category_id,
-      categoryName: p.categories?.name,
-      isFeatured: p.is_featured,
-      purchasePrice: p.purchase_price,
-      salePrice: p.sale_price,
-      initialStock: p.initial_stock,
-      sourceUrl: p.source_url,
-      createdAt: p.created_at
-    }));
-  },
-  async addProduct(product: Partial<Product>): Promise<Product> {
-    const { data, error } = await supabase.from('products').insert([{
-      name: product.name,
-      category_id: product.categoryId || null,
-      is_featured: product.isFeatured || false,
-      purchase_price: product.purchasePrice,
-      sale_price: product.salePrice,
-      stock: product.stock,
-      initial_stock: product.initialStock,
-      enabled: product.enabled,
-      image: product.image,
-      source_url: product.sourceUrl
-    }]).select('*, categories(name)').single();
-    if (error) throw error;
-    return {
-      ...data,
-      purchasePrice: data.purchase_price,
-      salePrice: data.sale_price,
-      initialStock: data.initial_stock,
-      sourceUrl: data.source_url,
-      createdAt: data.created_at
-    };
-  },
-  async updateProduct(id: number, updates: Partial<Product>): Promise<void> {
-    const payload: any = {};
-    if (updates.stock !== undefined) payload.stock = updates.stock;
-    if (updates.enabled !== undefined) payload.enabled = updates.enabled;
-    if (updates.image !== undefined) payload.image = updates.image;
-    if (updates.isFeatured !== undefined) payload.is_featured = updates.isFeatured;
-    if (updates.categoryId !== undefined) payload.category_id = updates.categoryId;
-    const { error } = await supabase.from('products').update(payload).eq('id', id);
-    if (error) throw error;
-  },
-  async updateStock(id: number, stock: number) {
-    const { error } = await supabase.from('products').update({ stock }).eq('id', id);
-    if (error) throw error;
-  },
-  async getOrders(): Promise<Order[]> {
-    const { data, error } = await supabase.from('orders').select('*, order_items(*)').order('date', { ascending: false });
-    if (error) throw error;
-    return data.map(o => ({
-      ...o,
-      clientId: o.client_id,
-      guestName: o.guest_name,
-      guestEmail: o.guest_email,
-      guestPhone: o.guest_phone,
-      items: o.order_items.map((i: any) => ({
-        productId: i.product_id,
-        quantity: i.quantity,
-        unitSalePrice: i.unit_sale_price,
-        unitPurchasePrice: i.unit_purchase_price
-      }))
-    }));
-  },
-  async addOrder(order: { clientId?: number; guestName?: string; guestEmail?: string; guestPhone?: string; date: string; status: string; items: OrderItem[] }): Promise<Order> {
-    const { data: oData, error: oError } = await supabase.from('orders').insert([{
-      client_id: order.clientId || null,
-      guest_name: order.guestName,
-      guest_email: order.guestEmail,
-      guest_phone: order.guestPhone,
-      date: order.date,
-      status: order.status
-    }]).select().single();
-    if (oError) throw oError;
+const BASE = "http://localhost:4000/api";
 
-    const itemsPayload = order.items.map(i => ({
-      order_id: oData.id,
-      product_id: i.productId,
-      quantity: i.quantity,
-      unit_sale_price: i.unitSalePrice,
-      unit_purchase_price: i.unitPurchasePrice
-    }));
-    const { error: iError } = await supabase.from('order_items').insert(itemsPayload);
-    if (iError) throw iError;
-    
-    return { ...oData, clientId: oData.client_id, items: order.items };
+async function http<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export const api = {
+  // ── AUTH ──────────────────────────────────────────────────
+  async signUpClient(email: string, password: string, name: string, phone: string): Promise<Client> {
+    const data = await http<{ client: any }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name, email, phone, password }),
+    });
+    return mapClient(data.client);
   },
+
+  async signInClient(email: string, password: string): Promise<Client> {
+    const data = await http<{ client: any }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    return mapClient(data.client);
+  },
+
+  // ── CATEGORIES ────────────────────────────────────────────
+  async getCategories(): Promise<Category[]> {
+    const rows = await http<any[]>("/categories");
+    return rows.map(mapCategory);
+  },
+
+  async addCategory(name: string, parentId?: number | null): Promise<Category> {
+    const row = await http<any>("/categories", {
+      method: "POST",
+      body: JSON.stringify({ name, parentId }),
+    });
+    return mapCategory(row);
+  },
+
+  async deleteCategory(id: number): Promise<void> {
+    await http(`/categories/${id}`, { method: "DELETE" });
+  },
+
+  // ── CLIENTS ───────────────────────────────────────────────
+  async getClients(): Promise<Client[]> {
+    const rows = await http<any[]>("/clients");
+    return rows.map(mapClient);
+  },
+
+  async addClient(client: { name: string; phone: string; email: string }): Promise<Client> {
+    const row = await http<any>("/clients", {
+      method: "POST",
+      body: JSON.stringify(client),
+    });
+    return mapClient(row);
+  },
+
+  // ── PRODUCTS ──────────────────────────────────────────────
+  async getProducts(): Promise<Product[]> {
+    const rows = await http<any[]>("/products");
+    return rows.map(mapProduct);
+  },
+
+  async addProduct(product: Partial<Product>): Promise<Product> {
+    const row = await http<any>("/products", {
+      method: "POST",
+      body: JSON.stringify(product),
+    });
+    return mapProduct(row);
+  },
+
+  async updateProduct(id: number, updates: Partial<Product>): Promise<void> {
+    await http(`/products/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async updateStock(id: number, stock: number): Promise<void> {
+    await http(`/products/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ stock }),
+    });
+  },
+
+  // ── ORDERS ────────────────────────────────────────────────
+  async getOrders(): Promise<Order[]> {
+    const rows = await http<any[]>("/orders");
+    return rows.map(mapOrder);
+  },
+
+  async addOrder(order: {
+    clientId?: number;
+    guestName?: string;
+    guestEmail?: string;
+    guestPhone?: string;
+    date: string;
+    status: string;
+    items: OrderItem[];
+  }): Promise<Order> {
+    const row = await http<any>("/orders", {
+      method: "POST",
+      body: JSON.stringify(order),
+    });
+    return mapOrder(row);
+  },
+
   async updateOrderStatus(id: number, status: string): Promise<void> {
-    const { error } = await supabase.from('orders').update({ status }).eq('id', id);
-    if (error) throw error;
+    await http(`/orders/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
   },
-  async getHeroBanner(): Promise<HeroBanner | null> {
-    const { data, error } = await supabase.from('hero_banner').select('*').eq('id', 1).single();
-    if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
-  },
-  async getFeaturedPanels(): Promise<FeaturedPanel[]> {
-    const { data, error } = await supabase.from('featured_panels').select('*');
-    if (error) throw error;
-    return data.map(p => ({ ...p, className: p.class_name, categoryId: p.category_id }));
-  },
+
+  // ── FAVORITES ─────────────────────────────────────────────
   async getFavorites(clientId: number): Promise<Favorite[]> {
-    const { data, error } = await supabase.from('favorites').select('*').eq('client_id', clientId);
-    if (error) throw error;
-    return data.map(f => ({ id: f.id, clientId: f.client_id, productId: f.product_id, createdAt: f.created_at }));
+    const rows = await http<any[]>(`/favorites/${clientId}`);
+    return rows.map(f => ({
+      id: f.id,
+      clientId: f.client_id,
+      productId: f.product_id,
+      createdAt: f.created_at,
+    }));
   },
+
   async toggleFavorite(clientId: number, productId: number, isFav: boolean): Promise<void> {
     if (isFav) {
-      await supabase.from('favorites').delete().eq('client_id', clientId).eq('product_id', productId);
+      await http("/favorites", {
+        method: "DELETE",
+        body: JSON.stringify({ clientId, productId }),
+      });
     } else {
-      await supabase.from('favorites').insert([{ client_id: clientId, product_id: productId }]);
+      await http("/favorites", {
+        method: "POST",
+        body: JSON.stringify({ clientId, productId }),
+      });
     }
-  }
+  },
+
+  // ── HERO BANNER ───────────────────────────────────────────
+  async getHeroBanner(): Promise<HeroBanner | null> {
+    return http<HeroBanner | null>("/hero-banner").catch(() => null);
+  },
+
+  // ── FEATURED PANELS ───────────────────────────────────────
+  async getFeaturedPanels(): Promise<FeaturedPanel[]> {
+    const rows = await http<any[]>("/featured-panels");
+    return rows.map(p => ({
+      id: String(p.id),
+      title: p.title,
+      cta: p.cta,
+      image: p.image,
+      className: p.class_name as FeaturedPanel["className"],
+      categoryId: p.category_id ?? null,
+    }));
+  },
+
+  // ── IMAGE UPLOAD ──────────────────────────────────────────
+  async uploadImage(file: File): Promise<string> {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`http://localhost:4000/api/files`, {
+      method: "POST",
+      body: form,
+    });
+    if (!res.ok) throw new Error("Error subiendo imagen");
+    const data = await res.json();
+    return data.url as string;
+  },
 };
+
+// ── MAPPERS ─────────────────────────────────────────────────
+function mapClient(c: any): Client {
+  return {
+    id: c.id,
+    name: c.name,
+    email: c.email,
+    phone: c.phone ?? "",
+    createdAt: c.created_at ?? "",
+  };
+}
+
+function mapCategory(c: any): Category {
+  return {
+    id: c.id,
+    name: c.name,
+    parentId: c.parent_id ?? null,
+    createdAt: c.created_at ?? "",
+  };
+}
+
+function mapProduct(p: any): Product {
+  return {
+    id: p.id,
+    name: p.name,
+    categoryId: p.category_id ?? null,
+    categoryName: p.category_name ?? undefined,
+    isFeatured: Boolean(p.is_featured),
+    purchasePrice: p.purchase_price,
+    salePrice: p.sale_price,
+    stock: p.stock,
+    initialStock: p.initial_stock,
+    enabled: Boolean(p.enabled),
+    image: p.image ?? "",
+    sourceUrl: p.source_url ?? "",
+    createdAt: p.created_at ?? "",
+  };
+}
+
+function mapOrder(o: any): Order {
+  return {
+    id: o.id,
+    clientId: o.client_id ?? undefined,
+    guestName: o.guest_name ?? undefined,
+    guestEmail: o.guest_email ?? undefined,
+    guestPhone: o.guest_phone ?? undefined,
+    date: o.date,
+    status: o.status,
+    items: (o.items ?? []).map((i: any) => ({
+      productId: i.product_id,
+      quantity: i.quantity,
+      unitSalePrice: i.unit_sale_price,
+      unitPurchasePrice: i.unit_purchase_price,
+    })),
+  };
+}

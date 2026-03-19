@@ -21,7 +21,8 @@ import ClientProfilePanel from "./features/users/ClientProfilePanel";
 import CustomerAuthModal from "./features/users/CustomerAuthModal";
 import type { CartItem, Client, Favorite, FeaturedPanel, HeroBanner, NewOrderItem, Order, OrderItem, Product, Tab, Category } from "./types";
 import { api } from "./lib/api";
-import { supabase } from "./lib/supabase";
+
+const CLIENT_SESSION_KEY = "juma_client";
 
 const DEFAULT_FEATURED_PANELS: FeaturedPanel[] = [
   {
@@ -122,23 +123,18 @@ function App() {
     loadData();
   }, []);
 
+  // Restore session from localStorage
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) api.getClientByAuthId(session.user.id).then(c => setCurrentClient(c));
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        api.getClientByAuthId(session.user.id, session.user.email).then(c => {
-          setCurrentClient(c);
-          if (c) api.getFavorites(c.id).then(setFavorites);
-        });
-      } else {
-        setCurrentClient(null);
-        setFavorites([]);
-      }
-    });
-    return () => subscription.unsubscribe();
+    const stored = localStorage.getItem(CLIENT_SESSION_KEY);
+    if (stored) {
+      try {
+        const client: Client = JSON.parse(stored);
+        setCurrentClient(client);
+        api.getFavorites(client.id).then(setFavorites).catch(() => {});
+      } catch { /* ignore */ }
+    }
   }, []);
+
 
   useEffect(() => {
     const raw = localStorage.getItem(ADMIN_SESSION_KEY);
@@ -627,7 +623,10 @@ function App() {
         <CustomerAuthModal
           allowGuest={authModalMode === "checkout"}
           onClose={() => setShowAuthModal(false)}
-          onSuccess={() => {
+          onSuccess={(client) => {
+            localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(client));
+            setCurrentClient(client);
+            api.getFavorites(client.id).then(setFavorites).catch(() => {});
             setShowAuthModal(false);
             if (authModalMode === "checkout") {
               handleCustomerCheckout();
@@ -724,7 +723,12 @@ function App() {
           clientName={currentClient.name}
           myOrders={orders.filter(o => o.clientId === currentClient.id)}
           myFavorites={products.filter(p => favorites.some(f => f.productId === p.id))}
-          onLogout={() => { api.signOutClient(); setActiveTab("catalogo"); }}
+          onLogout={() => {
+            localStorage.removeItem(CLIENT_SESSION_KEY);
+            setCurrentClient(null);
+            setFavorites([]);
+            setActiveTab("catalogo");
+          }}
         />
       ) : null}
 

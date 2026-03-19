@@ -1,9 +1,10 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { api } from "../../lib/api";
+import type { Client } from "../../types";
 
 type CustomerAuthModalProps = {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (client: Client) => void;
   allowGuest?: boolean;
   onGuestContinue?: (guestData: { name: string; email: string; phone: string }) => void;
 };
@@ -16,7 +17,6 @@ export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGu
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [confirmationSent, setConfirmationSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,14 +25,14 @@ export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGu
 
     try {
       if (tab === "login") {
-        await api.signInClient(email, password);
-        onSuccess();
+        const client = await api.signInClient(email, password);
+        onSuccess(client);
       } else if (tab === "register") {
         if (!name.trim() || !phone.trim() || !email.trim() || !password.trim()) {
            throw new Error("Por favor completa todos los campos.");
         }
-        await api.signUpClient(email, password, name, phone);
-        onSuccess();
+        const client = await api.signUpClient(email, password, name, phone);
+        onSuccess(client);
       } else if (tab === "guest" && onGuestContinue) {
         if (!name.trim() || !phone.trim() || !email.trim()) {
            throw new Error("Por favor completa tus datos básicos de facturación.");
@@ -40,11 +40,7 @@ export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGu
         onGuestContinue({ name, email, phone });
       }
     } catch (err: any) {
-      if (err.message === 'CONFIRMATION_REQUIRED') {
-        setConfirmationSent(true);
-      } else {
-        setError(err.message || "Ocurrió un error en la autenticación.");
-      }
+      setError(err.message || "Ocurrió un error en la autenticación.");
     } finally {
       setLoading(false);
     }
@@ -141,11 +137,7 @@ export default function CustomerAuthModal({ onClose, onSuccess, allowGuest, onGu
           {error && (
             <p className="text-red-500 text-sm font-bold text-center mt-2">{error}</p>
           )}
-          {confirmationSent && (
-            <div className="bg-green-50 border border-green-200 text-green-700 text-sm font-medium text-center p-4 rounded-xl mt-2">
-              ✅ ¡Revisa tu email! Te enviamos un link de confirmación. Una vez confirmado, podrás iniciar sesión.
-            </div>
-          )}
+
         </form>
       </div>
     </div>
