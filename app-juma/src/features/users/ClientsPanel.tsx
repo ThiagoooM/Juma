@@ -23,8 +23,8 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
       {/* Header Actions */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">Admin Clientes</h2>
-          <p className="text-slate-500 mt-1">Directorio de clientes y comportamiento de compra.</p>
+          <h2 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">Administración de Usuarios</h2>
+          <p className="text-slate-500 mt-1">Directorio de usuarios registrados y comportamiento de compra.</p>
         </div>
       </div>
 
@@ -35,7 +35,7 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
             <span className="material-symbols-outlined text-3xl">groups</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Total Clientes</p>
+            <p className="text-sm font-medium text-slate-500">Total Usuarios</p>
             <p className="text-2xl font-black text-slate-900 dark:text-white">{clientStats.length}</p>
           </div>
         </div>
@@ -43,7 +43,7 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
 
       {/* Add Client Form */}
       <form className="bg-white dark:bg-slate-900 p-8 rounded-xl border border-neutral-soft dark:border-slate-800 shadow-sm" onSubmit={onAddClient}>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 border-b border-neutral-soft dark:border-slate-800 pb-4">Registrar Nuevo Cliente</h3>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 border-b border-neutral-soft dark:border-slate-800 pb-4">Registrar Nuevo Usuario</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700">Nombre Completo</label>
@@ -59,7 +59,7 @@ function ClientsPanel({ clientForm, clientStats, onClientFormChange, onAddClient
           </div>
         </div>
         <div className="flex justify-end pt-4 border-t border-neutral-soft dark:border-slate-800">
-          <button type="submit" className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary/20 transition-all">Guardar Cliente</button>
+          <button type="submit" className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary/20 transition-all">Guardar Usuario</button>
         </div>
       </form>
 

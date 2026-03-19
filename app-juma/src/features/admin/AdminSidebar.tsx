@@ -12,7 +12,7 @@ export default function AdminSidebar({ activeTab, onSetActiveTab }: AdminSidebar
     { id: "venta_rapida", label: "Venta Rápida", icon: "bolt" },
     { id: "inventario", label: "Inventario", icon: "inventory_2" },
     { id: "productos", label: "Productos", icon: "layers" },
-    { id: "clientes", label: "Clientes", icon: "group" },
+    { id: "clientes", label: "Usuarios", icon: "group" },
     { id: "pedidos", label: "Pedidos", icon: "shopping_bag" },
     { id: "finanzas", label: "Finanzas", icon: "payments" },
     { id: "inicio_admin", label: "Configuración", icon: "settings" },
@@ -22,8 +22,8 @@ export default function AdminSidebar({ activeTab, onSetActiveTab }: AdminSidebar
     <aside className="fixed left-0 top-0 h-screen w-64 bg-stone-200 dark:bg-stone-900 flex flex-col py-8 px-4 z-50">
       <div className="mb-10 px-2 flex flex-col items-start gap-4">
         <div>
-          <h1 className="font-headline text-2xl italic text-amber-900 dark:text-amber-200">Golden Edition</h1>
-          <p className="font-body font-medium text-[10px] tracking-widest text-stone-500 uppercase mt-1">Boutique Admin</p>
+          <h1 className="font-headline text-2xl italic text-amber-900 dark:text-amber-200 uppercase tracking-tighter">Juma Accessory</h1>
+          <p className="font-body font-medium text-[10px] tracking-widest text-stone-500 uppercase mt-1">Panel de Control</p>
         </div>
         <button 
           onClick={() => onSetActiveTab("catalogo")}
