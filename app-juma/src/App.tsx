@@ -24,6 +24,7 @@ import ClientProfilePanel from "./features/users/ClientProfilePanel";
 import CustomerAuthModal from "./features/users/CustomerAuthModal";
 import type { CartItem, Client, Favorite, FeaturedPanel, HeroBanner, NewOrderItem, Order, OrderItem, Product, Tab, Category } from "./types";
 import { api } from "./lib/api";
+import { getProductDisplayName } from "./lib/productLabel";
 
 const CLIENT_SESSION_KEY = "juma_client";
 
@@ -88,6 +89,7 @@ function App() {
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [productForm, setProductForm] = useState({
     name: "",
+    subName: "",
     categoryId: "",
     purchasePrice: "",
     salePrice: "",
@@ -279,13 +281,14 @@ function App() {
   const addProduct = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-    if (!productForm.name.trim() || !productForm.purchasePrice || !productForm.salePrice || !productForm.stock) return;
+    if ((!productForm.name.trim() && !productForm.subName.trim()) || !productForm.purchasePrice || !productForm.salePrice || !productForm.stock) return;
     const stock = Number(productForm.stock);
     if (Number.isNaN(stock) || stock < 0) return;
     
     try {
       const newProduct = await api.addProduct({
-        name: productForm.name.trim(),
+        name: productForm.name.trim() || productForm.subName.trim(),
+        subName: productForm.subName.trim(),
         categoryId: Number(productForm.categoryId) || undefined,
         isFeatured: productForm.isFeatured,
         purchasePrice: Number(productForm.purchasePrice),
@@ -298,7 +301,7 @@ function App() {
       });
       setProducts((prev) => [newProduct, ...prev]);
       
-      setProductForm({ name: "", categoryId: "", purchasePrice: "", salePrice: "", stock: "", sourceUrl: "", isFeatured: false });
+      setProductForm({ name: "", subName: "", categoryId: "", purchasePrice: "", salePrice: "", stock: "", sourceUrl: "", isFeatured: false });
       setProductImageData("");
       setActiveTab("catalogo");
     } catch (err) {
@@ -439,6 +442,28 @@ function App() {
       await api.updateProduct(productId, { enabled: !product.enabled });
       setProducts((prev) => prev.map((product) => (product.id === productId ? { ...product, enabled: !product.enabled } : product)));
     } catch (err) { console.error(err); }
+  };
+
+  const saveProductEdits = async (productId: number, updates: Partial<Product>) => {
+    const normalizedName = updates.name?.trim() ?? "";
+    const normalizedSubName = updates.subName?.trim() ?? "";
+    const payload: Partial<Product> = {
+      ...updates,
+      name: normalizedName || normalizedSubName,
+      subName: normalizedSubName,
+    };
+    try {
+      await api.updateProduct(productId, payload);
+      setProducts((prev) =>
+        prev.map((product) => {
+          if (product.id !== productId) return product;
+          const next = { ...product, ...payload };
+          return { ...next, name: getProductDisplayName(next) };
+        }),
+      );
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const clientStats = useMemo(() => clients.map((client) => {
@@ -637,7 +662,7 @@ function App() {
 
   if (isAdminTab) {
     return (
-      <div className="flex min-h-screen bg-stone-50 dark:bg-stone-950 font-body text-stone-900 dark:text-stone-100">
+      <div className="flex min-h-screen bg-background font-body text-ink">
         <AdminSidebar activeTab={activeTab} onSetActiveTab={setActiveTab} />
         <main className="flex-1 ml-64 min-h-screen flex flex-col">
           <AdminTopNav onLogout={logoutAdmin} />
@@ -732,6 +757,7 @@ function App() {
                   onAddProduct={addProduct}
                   onToggleProductEnabled={toggleProductEnabled}
                   onUpdateExistingProductImage={updateExistingProductImage}
+                  onSaveProductEdits={saveProductEdits}
                 />
               </div>
             )}

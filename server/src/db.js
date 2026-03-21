@@ -62,6 +62,7 @@ export async function initDb() {
         await run(`CREATE TABLE IF NOT EXISTS products (
           id             INTEGER PRIMARY KEY AUTOINCREMENT,
           name           TEXT NOT NULL,
+          sub_name       TEXT NOT NULL DEFAULT '',
           category_id    INTEGER REFERENCES categories(id) ON DELETE SET NULL,
           is_featured    INTEGER NOT NULL DEFAULT 0,
           purchase_price REAL NOT NULL DEFAULT 0,
@@ -137,6 +138,12 @@ export async function initDb() {
           await run(`INSERT INTO featured_panels (title, cta, image, class_name) VALUES ('Acero Dorado', 'Mira mas', 'https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?auto=format&fit=crop&w=1200&q=80', 'card-top')`);
           await run(`INSERT INTO featured_panels (title, cta, image, class_name) VALUES ('Acero Quirurgico', 'Mira mas', 'https://images.unsplash.com/photo-1588444650700-6d6db1f6f7fd?auto=format&fit=crop&w=1200&q=80', 'card-bottom-left')`);
           await run(`INSERT INTO featured_panels (title, cta, image, class_name) VALUES ('Pulseras Charms', 'Mira mas', 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=1200&q=80', 'card-bottom-right')`);
+        }
+
+        const productColumns = await all("PRAGMA table_info(products)");
+        const hasSubName = productColumns.some((column) => column.name === "sub_name");
+        if (!hasSubName) {
+          await run("ALTER TABLE products ADD COLUMN sub_name TEXT NOT NULL DEFAULT ''");
         }
 
         resolve();

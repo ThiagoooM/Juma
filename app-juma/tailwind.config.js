@@ -10,9 +10,13 @@ module.exports = {
         colors: {
             "primary": "#C5A37F",
             "secondary": "#F3EDE2",
+            "tertiary": "#97ABC1",
             "background": "#FCFAFA",
-            "carbon": "#2D2D2D",
-            "muted": "#757575",
+            "neutral": "#FCFAFA",
+            "carbon": "#1F1A17",
+            "ink": "#5A4A3F",
+            "muted": "#8C837B",
+            "line": "#E6DED4",
         },
         fontFamily: {
             "sans": ["Inter", "sans-serif"],

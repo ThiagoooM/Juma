@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type { Client, NewOrderItem, Order, OrderStatus, Product } from "../../types";
+import { getProductDisplayName } from "../../lib/productLabel";
 
 type OrderForm = {
   clientId: string;
@@ -50,7 +51,7 @@ function OrdersPanel({
     const normalized = query.trim().toLowerCase();
     if (!normalized) return enabledProducts;
     return enabledProducts.filter((product) =>
-      [product.name, product.category].some((value) => value.toLowerCase().includes(normalized)),
+      [product.name, product.subName, product.categoryName || ""].some((value) => (value || "").toLowerCase().includes(normalized)),
     );
   }, [enabledProducts, query]);
 
@@ -168,12 +169,12 @@ function OrdersPanel({
                 >
                   <div className="h-16 w-16 mb-2 rounded bg-slate-100 flex items-center justify-center overflow-hidden">
                     {product.image ? (
-                      <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                      <img src={product.image} alt={getProductDisplayName(product)} className="h-full w-full object-cover" />
                     ) : (
                       <span className="material-symbols-outlined text-slate-300">image</span>
                     )}
                   </div>
-                  <span className="text-xs font-bold text-slate-900 line-clamp-1 w-full" title={product.name}>{product.name}</span>
+                  <span className="text-xs font-bold text-slate-900 line-clamp-1 w-full" title={getProductDisplayName(product)}>{getProductDisplayName(product)}</span>
                   <div className="flex justify-between w-full mt-1 items-center">
                     <span className="text-xs font-bold text-primary">${product.salePrice.toLocaleString("es-AR")}</span>
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${product.stock > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>
@@ -202,13 +203,13 @@ function OrdersPanel({
                   <div key={`row-${row.index}`} className="flex items-center gap-4 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="h-12 w-12 rounded bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
                       {row.product.image ? (
-                        <img src={row.product.image} alt={row.product.name} className="h-full w-full object-cover" />
+                        <img src={row.product.image} alt={getProductDisplayName(row.product)} className="h-full w-full object-cover" />
                       ) : (
                         <span className="material-symbols-outlined text-slate-300">image</span>
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-sm text-slate-900">{row.product.name}</p>
+                      <p className="font-bold text-sm text-slate-900">{getProductDisplayName(row.product)}</p>
                       <p className="text-xs text-slate-500">${row.product.salePrice.toLocaleString("es-AR")} c/u</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -272,13 +273,17 @@ function OrdersPanel({
             <tbody className="divide-y divide-neutral-soft dark:divide-slate-800">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  {(() => {
+                    const clientName = order.clientId ? getClientName(order.clientId) : order.guestName || "Invitado";
+                    return (
+                      <>
                   <td className="p-4 font-bold text-slate-900 dark:text-white">#{String(order.id).padStart(5, '0')}</td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
-                        {getClientName(order.clientId).substring(0, 2)}
+                        {clientName.substring(0, 2)}
                       </div>
-                      <span className="font-medium text-slate-700 dark:text-slate-300">{getClientName(order.clientId)}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">{clientName}</span>
                     </div>
                   </td>
                   <td className="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium">
@@ -314,6 +319,9 @@ function OrdersPanel({
                       </span>
                     )}
                   </td>
+                      </>
+                    );
+                  })()}
                 </tr>
               ))}
               {orders.length === 0 && (

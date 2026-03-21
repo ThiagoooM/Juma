@@ -1,4 +1,5 @@
 import type { Order, Product } from "../../types";
+import { getProductDisplayName } from "../../lib/productLabel";
 
 type ClientProfilePanelProps = {
   clientName: string;
@@ -79,13 +80,13 @@ export default function ClientProfilePanel({ clientName, myOrders, myFavorites, 
               <div key={product.id} className="flex flex-col group">
                 <div className="aspect-square overflow-hidden rounded-xl bg-slate-100 mb-3">
                   {product.image ? (
-                    <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} />
+                    <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.image} alt={getProductDisplayName(product)} />
                   ) : (
                     <span className="material-symbols-outlined text-5xl text-slate-300 flex items-center justify-center h-full">image</span>
                   )}
                 </div>
                 <p className="text-xs font-bold text-primary/60 uppercase tracking-widest mb-0.5">{product.categoryName || ""}</p>
-                <p className="font-medium text-slate-800 dark:text-slate-200 text-sm">{product.name}</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200 text-sm">{getProductDisplayName(product)}</p>
                 <p className="font-black text-primary mt-1">${product.salePrice.toLocaleString("es-AR")}</p>
               </div>
             ))}

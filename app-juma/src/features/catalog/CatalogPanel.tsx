@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { FeaturedPanel, HeroBanner, Product } from "../../types";
+import { getProductDisplayName } from "../../lib/productLabel";
 
 type CatalogPanelProps = {
   products: Product[];
@@ -126,7 +127,7 @@ function CatalogPanel({
               <div key={product.id} className="flex flex-col group">
                 <div className="relative aspect-square overflow-hidden rounded-xl mb-4 bg-slate-100 shadow-sm transition-shadow group-hover:shadow-xl flex items-center justify-center">
                   {product.image ? (
-                    <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} />
+                    <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.image} alt={getProductDisplayName(product)} />
                   ) : (
                     <span className="material-symbols-outlined text-6xl text-slate-300">image</span>
                   )}
@@ -146,7 +147,7 @@ function CatalogPanel({
                   )}
                 </div>
                 <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest mb-1">{product.categoryName || "Categoría"}</p>
-                <h4 className="text-slate-800 dark:text-slate-200 font-medium text-lg leading-tight">{product.name}</h4>
+                <h4 className="text-slate-800 dark:text-slate-200 font-medium text-lg leading-tight">{getProductDisplayName(product)}</h4>
                 <p className="text-slate-900 dark:text-slate-100 font-bold mt-1 text-xl">${product.salePrice.toLocaleString("es-AR")}</p>
                 <button 
                   onClick={() => onAddToCart(product.id)} 

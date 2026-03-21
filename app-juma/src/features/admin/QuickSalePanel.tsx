@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Category, Client, Order, OrderItem, Product } from "../../types";
 import { api } from "../../lib/api";
+import { getProductDisplayName } from "../../lib/productLabel";
 
 type QuickSaleItem = {
   product: Product;
@@ -33,7 +34,12 @@ function QuickSalePanel({ products, categories, clients, onOrderPlaced, onUpdate
     if (selectedCategoryId) list = list.filter(p => p.categoryId === selectedCategoryId);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.categoryName || "").toLowerCase().includes(q));
+      list = list.filter(
+        (p) =>
+          getProductDisplayName(p).toLowerCase().includes(q) ||
+          (p.subName || "").toLowerCase().includes(q) ||
+          (p.categoryName || "").toLowerCase().includes(q),
+      );
     }
     return list;
   }, [enabledProducts, selectedCategoryId, searchQuery]);
@@ -179,7 +185,7 @@ function QuickSalePanel({ products, categories, clients, onOrderPlaced, onUpdate
                   >
                     <div className="aspect-square rounded-xl bg-[#F3EDE2] mb-3 relative overflow-hidden">
                       {product.image ? (
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <img src={product.image} alt={getProductDisplayName(product)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <span className="material-symbols-outlined text-4xl text-slate-300">image</span>
@@ -194,7 +200,7 @@ function QuickSalePanel({ products, categories, clients, onOrderPlaced, onUpdate
                         </div>
                       )}
                     </div>
-                    <h3 className="font-semibold text-slate-800 text-sm leading-tight mb-1 group-hover:text-primary transition-colors">{product.name}</h3>
+                    <h3 className="font-semibold text-slate-800 text-sm leading-tight mb-1 group-hover:text-primary transition-colors">{getProductDisplayName(product)}</h3>
                     <p className="text-xs text-slate-400 mb-2">{product.categoryName || ""}</p>
                     <div className="mt-auto flex items-center justify-between">
                       <span className="text-primary font-bold">${product.salePrice.toLocaleString("es-AR")}</span>
@@ -233,7 +239,7 @@ function QuickSalePanel({ products, categories, clients, onOrderPlaced, onUpdate
             <div key={item.product.id} className="flex items-center gap-4">
               <div className="size-16 rounded-xl overflow-hidden bg-[#F3EDE2] flex-shrink-0">
                 {item.product.image ? (
-                  <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                  <img src={item.product.image} alt={getProductDisplayName(item.product)} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className="material-symbols-outlined text-slate-300">image</span>
@@ -241,7 +247,7 @@ function QuickSalePanel({ products, categories, clients, onOrderPlaced, onUpdate
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-slate-800 truncate">{item.product.name}</h4>
+                <h4 className="text-sm font-semibold text-slate-800 truncate">{getProductDisplayName(item.product)}</h4>
                 <p className="text-xs text-primary font-bold">${(item.product.salePrice * item.quantity).toLocaleString("es-AR")}</p>
                 <div className="flex items-center gap-3 mt-2">
                   <button

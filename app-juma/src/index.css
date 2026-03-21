@@ -3,7 +3,17 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    @apply bg-background;
+  }
+}
+
+@layer base {
   body {
-    @apply font-sans bg-background text-carbon;
+    @apply font-sans bg-background text-ink;
   }
 }
