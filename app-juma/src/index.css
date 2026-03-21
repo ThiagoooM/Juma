@@ -22,10 +22,10 @@
   h3,
   h4,
   .font-headline {
-    @apply font-headline;
+    font-family: "Newsreader", serif;
   }
 
   .font-body {
-    @apply font-body;
+    font-family: "Inter", sans-serif;
   }
 }
