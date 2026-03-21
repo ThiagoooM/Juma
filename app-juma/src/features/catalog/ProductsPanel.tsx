@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Category, Product } from "../../types";
 import { getProductDisplayName } from "../../lib/productLabel";
@@ -62,8 +62,10 @@ function ProductsPanel({
   onImportProducts,
 }: ProductsPanelProps) {
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, ProductDraft>>({});
+  const quickEditRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setDrafts((prev) => {
@@ -77,13 +79,16 @@ function ProductsPanel({
 
   const filteredProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return products;
-    return products.filter((product) =>
-      [product.name, product.subName, product.categoryName || ""].some((value) =>
-        (value || "").toLowerCase().includes(normalized),
-      ),
-    );
-  }, [products, query]);
+    return products.filter((product) => {
+      const matchesQuery =
+        !normalized ||
+        [product.name, product.subName, product.categoryName || ""].some((value) =>
+          (value || "").toLowerCase().includes(normalized),
+        );
+      const matchesCategory = !categoryFilter || String(product.categoryId ?? "") === categoryFilter;
+      return matchesQuery && matchesCategory;
+    });
+  }, [products, query, categoryFilter]);
 
   const stats = useMemo(() => {
     const totalProducts = products.length;
@@ -141,8 +146,16 @@ function ProductsPanel({
     });
   };
 
+  const openQuickEdit = (product: Product) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [product.id]: prev[product.id] ?? buildDraft(product),
+    }));
+    quickEditRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div className="flex-1 p-6 md:p-10 space-y-20 bg-secondary dark:bg-carbon min-h-screen">
+    <div className="flex-1 p-6 md:p-10 space-y-12 bg-secondary min-h-screen text-ink">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">Admin Productos</h2>
@@ -158,48 +171,48 @@ function ProductsPanel({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-neutral-soft dark:border-slate-800 flex items-center gap-4 shadow-sm">
+        <div className="bg-background p-6 rounded-xl border border-line flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
             <span className="material-symbols-outlined text-3xl">inventory</span>
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Total Prod.</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">{stats.totalProducts}</p>
+            <p className="text-2xl font-black text-ink">{stats.totalProducts}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-neutral-soft dark:border-slate-800 flex items-center gap-4 shadow-sm">
+        <div className="bg-background p-6 rounded-xl border border-line flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
             <span className="material-symbols-outlined text-3xl">warning</span>
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Sin Stock</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">{outOfStockCount}</p>
+            <p className="text-2xl font-black text-ink">{outOfStockCount}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-neutral-soft dark:border-slate-800 flex items-center gap-4 shadow-sm">
+        <div className="bg-background p-6 rounded-xl border border-line flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-primary/10 text-primary rounded-lg">
             <span className="material-symbols-outlined text-3xl">payments</span>
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Valor Stock</p>
-            <p className="text-xl font-black text-slate-900 dark:text-white">${stats.totalSaleStock.toLocaleString("es-AR")}</p>
+            <p className="text-xl font-black text-ink">${stats.totalSaleStock.toLocaleString("es-AR")}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-neutral-soft dark:border-slate-800 flex items-center gap-4 shadow-sm">
+        <div className="bg-background p-6 rounded-xl border border-line flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-green-50 text-green-600 rounded-lg">
             <span className="material-symbols-outlined text-3xl">trending_up</span>
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Ganancia Proy.</p>
-            <p className="text-xl font-black text-slate-900 dark:text-white">${stats.projectedProfit.toLocaleString("es-AR")}</p>
+            <p className="text-xl font-black text-ink">${stats.projectedProfit.toLocaleString("es-AR")}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-neutral-soft dark:border-slate-800 shadow-sm p-6">
+      <div className="bg-background rounded-xl border border-line shadow-sm p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Importar productos</h3>
+            <h3 className="text-lg font-bold text-ink">Importar productos</h3>
             <p className="text-sm text-slate-500 mt-1">CSV con columnas: `Nombre, subnombre, precio_compra, precio_venta, stock, categoria`.</p>
           </div>
           <label className="inline-flex items-center gap-2 bg-primary/10 hover:bg-primary hover:text-white text-primary px-4 py-2.5 rounded-lg font-bold text-sm transition-colors cursor-pointer">
@@ -212,13 +225,13 @@ function ProductsPanel({
 
       {showForm && (
         <form
-          className="bg-white dark:bg-slate-900 p-8 rounded-xl border border-neutral-soft dark:border-slate-800 shadow-sm animate-fade-in"
+          className="bg-background p-8 rounded-xl border border-line shadow-sm animate-fade-in"
           onSubmit={(event) => {
             onAddProduct(event);
             setShowForm(false);
           }}
         >
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Agregar Nuevo Producto</h3>
+          <h3 className="text-lg font-bold text-ink mb-6">Agregar Nuevo Producto</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Nombre visible</label>
@@ -345,21 +358,35 @@ function ProductsPanel({
         </form>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-neutral-soft dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-neutral-soft dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-background rounded-xl border border-line overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-line flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex gap-4 overflow-x-auto w-full sm:w-auto">
             <button className="px-4 py-2 text-sm font-bold border-b-2 border-primary text-primary whitespace-nowrap">Todos</button>
             <button className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Visibles ({stats.enabledCount})</button>
             <button className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Ocultos ({stats.disabledCount})</button>
           </div>
-          <div className="relative w-full sm:w-64">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-            <input
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              placeholder="Buscar..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+          <div className="flex w-full lg:w-auto gap-3">
+            <div className="relative w-full sm:w-64">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+              <input
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                placeholder="Buscar..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <select
+              className="w-full lg:w-56 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="">Todas las categorias</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -373,14 +400,14 @@ function ProductsPanel({
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500">Precio Venta</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500">Stock</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500">Estado</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Editar Imagen</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-soft dark:divide-slate-800">
               {filteredProducts.map((product) => {
                 const displayName = getProductDisplayName(product);
                 return (
-                  <tr key={product.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <tr key={product.id} className="hover:bg-secondary/35 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center">
@@ -391,7 +418,7 @@ function ProductsPanel({
                           )}
                         </div>
                         <div className="min-w-0">
-                          <span className="font-bold text-sm text-slate-900 dark:text-white leading-tight block">{displayName}</span>
+                          <span className="font-bold text-sm text-ink leading-tight block">{displayName}</span>
                           {product.subName && product.name.trim() && (
                             <span className="text-xs text-slate-400 block truncate">{product.subName}</span>
                           )}
@@ -435,15 +462,25 @@ function ProductsPanel({
                       </label>
                     </td>
                     <td className="p-4 text-right">
-                      <label className="text-slate-400 hover:text-primary transition-colors cursor-pointer p-2 inline-flex items-center justify-center rounded-lg hover:bg-primary/10">
-                        <span className="material-symbols-outlined">add_a_photo</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => onUpdateExistingProductImage(product.id, e.target.files?.[0] ?? null)}
-                        />
-                      </label>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openQuickEdit(product)}
+                          className="inline-flex items-center gap-1 bg-tertiary/20 text-[#36506b] hover:bg-tertiary hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                          Editar
+                        </button>
+                        <label className="text-slate-400 hover:text-primary transition-colors cursor-pointer p-2 inline-flex items-center justify-center rounded-lg hover:bg-primary/10">
+                          <span className="material-symbols-outlined">add_a_photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => onUpdateExistingProductImage(product.id, e.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -460,9 +497,9 @@ function ProductsPanel({
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-neutral-soft dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-neutral-soft dark:border-slate-800">
-          <h3 className="font-bold text-lg text-slate-900 dark:text-white">Edicion rapida de productos</h3>
+      <div ref={quickEditRef} className="bg-background rounded-xl border border-line overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-line">
+          <h3 className="font-bold text-lg text-ink">Edicion rapida de productos</h3>
           <p className="text-sm text-slate-500 mt-1">Edita nombre, subnombre, categoria, precios y stock sin salir del panel.</p>
         </div>
         <div className="overflow-x-auto">

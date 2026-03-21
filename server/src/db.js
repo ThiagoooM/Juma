@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import sqlite3 from "sqlite3";
 
-const DATA_DIR = path.resolve("data");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, "../data");
 const DB_PATH = path.join(DATA_DIR, "juma.db");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 

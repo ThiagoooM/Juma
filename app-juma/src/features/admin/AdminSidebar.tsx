@@ -22,38 +22,38 @@ export default function AdminSidebar({ activeTab, onSetActiveTab }: AdminSidebar
     <aside className="fixed left-0 top-0 h-screen w-64 bg-secondary border-r border-line flex flex-col py-8 px-4 z-50">
       <div className="mb-10 px-2 flex flex-col items-start gap-4">
         <div>
-          <h1 className="font-headline text-2xl italic text-primary uppercase tracking-tighter">Juma Accessory</h1>
+          <h1 className="font-headline text-2xl text-primary tracking-tight">Juma Accessory</h1>
           <p className="font-body font-medium text-[10px] tracking-widest text-muted uppercase mt-1">Panel de Control</p>
         </div>
         <button 
           onClick={() => onSetActiveTab("catalogo")}
-          className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest rounded-full transition-all border border-primary/20"
+          className="flex items-center gap-2 px-3 py-1.5 bg-background hover:bg-white text-primary text-[10px] font-bold uppercase tracking-widest rounded transition-all border border-primary/20"
         >
           <span className="material-symbols-outlined text-[14px]">visibility</span>
           Web Preview
         </button>
       </div>
 
-      <nav className="flex-1 space-y-1">
+      <nav className="flex-1 space-y-1.5">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onSetActiveTab(item.id as Tab)}
-            className={`w-full flex items-center gap-3 px-4 py-3 transition-colors duration-150 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 transition-colors duration-150 border-r-2 ${
               activeTab === item.id
-                ? "bg-background text-primary font-semibold border border-primary/15 rounded-xl shadow-sm"
-                : "text-ink/80 hover:bg-background/70 rounded-xl"
+                ? "bg-background text-primary font-semibold border-r-primary"
+                : "text-muted hover:bg-background/70 border-r-transparent"
             }`}
           >
-            <span className={`material-symbols-outlined ${activeTab === item.id ? "text-primary" : "text-tertiary"}`} data-icon={item.icon}>
+            <span className={`material-symbols-outlined ${activeTab === item.id ? "text-primary" : "text-muted"}`} data-icon={item.icon}>
               {item.icon}
             </span>
-            <span className="font-['Inter'] font-medium text-sm tracking-wide">{item.label}</span>
+            <span className="font-body font-medium text-sm tracking-wide">{item.label}</span>
           </button>
         ))}
       </nav>
 
-      <div className="mt-auto px-4 py-4 bg-background rounded-xl border border-line flex items-center gap-3">
+      <div className="mt-auto px-4 py-4 bg-background rounded border border-line flex items-center gap-3 shadow-subtle">
         <div className="size-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">J</div>
         <div>
           <p className="text-xs font-bold text-primary">Juma Accessory</p>

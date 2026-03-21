@@ -14,6 +14,18 @@
 
 @layer base {
   body {
-    @apply font-sans bg-background text-ink;
+    @apply font-body bg-background text-carbon antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-headline {
+    @apply font-headline;
+  }
+
+  .font-body {
+    @apply font-body;
   }
 }

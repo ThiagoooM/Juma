@@ -9,20 +9,25 @@ module.exports = {
     extend: {
         colors: {
             "primary": "#C5A37F",
-            "secondary": "#F3EDE2",
-            "tertiary": "#97ABC1",
             "background": "#FCFAFA",
-            "neutral": "#FCFAFA",
-            "carbon": "#1F1A17",
-            "ink": "#5A4A3F",
-            "muted": "#8C837B",
-            "line": "#E6DED4",
+            "secondary": "#F3EDE2",
+            "carbon": "#2D2D2D",
+            "ink": "#2D2D2D",
+            "muted": "#757575",
+            "success": "#A8B69F",
+            "warning": "#D9B99B",
+            "line": "#E9E1D8",
         },
         fontFamily: {
             "sans": ["Inter", "sans-serif"],
-            "serif": ["Playfair Display", "serif"]
+            "serif": ["Newsreader", "serif"],
+            "headline": ["Newsreader", "serif"],
+            "body": ["Inter", "sans-serif"],
         },
-        borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        borderRadius: {"DEFAULT": "0.25rem", "lg": "0.25rem", "xl": "0.5rem", "full": "9999px"},
+        boxShadow: {
+          subtle: "0 8px 24px rgba(45, 45, 45, 0.04)",
+        },
     },
   },
   plugins: [

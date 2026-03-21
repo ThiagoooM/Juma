@@ -920,8 +920,10 @@ function App() {
               <div className="pt-20 px-10 pb-10">
                 <InventoryPanel
                   products={products}
+                  categories={categories}
                   lowStockProducts={lowStockProducts}
                   onUpdateStock={updateStock}
+                  onSaveProductEdits={saveProductEdits}
                 />
               </div>
             )}
