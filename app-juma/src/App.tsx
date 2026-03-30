@@ -155,6 +155,7 @@ function App() {
   const [currentClient, setCurrentClient] = useState<Client | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "checkout">("login");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [clientForm, setClientForm] = useState({ name: "", phone: "", email: "" });
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -797,14 +798,14 @@ function App() {
 
   if (isAdminTab) {
     return (
-      <div className="flex min-h-screen bg-background font-body text-ink">
-        <AdminSidebar activeTab={activeTab} onSetActiveTab={setActiveTab} />
-        <main className="flex-1 ml-64 min-h-screen flex flex-col">
-          <AdminTopNav onLogout={logoutAdmin} />
+      <div className="flex min-h-screen bg-secondary/30 font-body text-ink">
+        <AdminSidebar activeTab={activeTab} onSetActiveTab={setActiveTab} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 lg:ml-64 min-h-screen flex flex-col">
+          <AdminTopNav onLogout={logoutAdmin} onToggleSidebar={() => setSidebarOpen(prev => !prev)} />
           
           <div className="flex-1">
             {error ? (
-              <div className="pt-20 px-10">
+              <div className="pt-20 px-4 lg:px-8">
                 <div className="bg-red-50 text-red-500 p-4 rounded-xl text-center text-sm font-bold tracking-widest uppercase flex items-center justify-center gap-2 border border-red-100">
                   <span className="material-symbols-outlined text-lg">error</span>
                   {error}
@@ -823,7 +824,7 @@ function App() {
             )}
 
             {activeTab === "catalogo" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <CatalogPanel
                   products={catalogProducts}
                   onAddToCart={addToCart}
@@ -839,7 +840,7 @@ function App() {
             )}
 
             {activeTab === "venta_rapida" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <QuickSalePanel
                   products={products}
                   categories={categories}
@@ -851,7 +852,7 @@ function App() {
             )}
 
             {activeTab === "inicio_admin" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <AdminHomePanel
                   heroBanner={heroBanner}
                   featuredPanels={featuredPanels}
@@ -871,7 +872,7 @@ function App() {
             )}
 
             {activeTab === "categorias" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <CategoriesPanel
                   categories={categories}
                   onAddCategory={addCategory}
@@ -881,7 +882,7 @@ function App() {
             )}
 
             {activeTab === "productos" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <ProductsPanel
                   products={products}
                   categories={categories}
@@ -899,7 +900,7 @@ function App() {
             )}
 
             {activeTab === "clientes" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <ClientsPanel
                   clientForm={clientForm}
                   clientStats={clientStats}
@@ -917,7 +918,7 @@ function App() {
             )}
 
             {activeTab === "inventario" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <InventoryPanel
                   products={products}
                   categories={categories}
@@ -929,7 +930,7 @@ function App() {
             )}
 
             {activeTab === "pedidos" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <OrdersPanel
                   clients={clients}
                   products={products}
@@ -950,7 +951,7 @@ function App() {
             )}
 
             {activeTab === "finanzas" && (
-              <div className="pt-20 px-10 pb-10">
+              <div className="pt-20 px-4 lg:px-8 pb-10">
                 <FinancePanel finance={finance} />
               </div>
             )}
